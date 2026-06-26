@@ -28,6 +28,7 @@ export async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Protect admin routes
   if (pathname.startsWith("/admin")) {
     if (!user || user.email !== process.env.ADMIN_EMAIL) {
       return NextResponse.redirect(new URL("/auth/login?next=/admin", request.url))

@@ -16,8 +16,30 @@ interface Variant {
   options: Record<string, string>
 }
 
+interface InitialProduct {
+  id: string
+  title: string
+  description: string | null
+  category_id: string | null
+  status: "draft" | "active" | "archived"
+  is_featured: boolean
+  tags: string[]
+  images: { url: string; alt: string }[]
+  seo_title: string | null
+  seo_description: string | null
+  variants: {
+    title: string
+    sku: string | null
+    price: number
+    compare_at_price: number | null
+    inventory: number
+    options: Record<string, string>
+  }[]
+}
+
 interface Props {
   categories: Category[]
+  product?: InitialProduct
 }
 
 const emptyVariant = (): Variant => ({
@@ -29,24 +51,39 @@ const emptyVariant = (): Variant => ({
   options: {},
 })
 
-export default function ProductForm({ categories }: Props) {
+export default function ProductForm({ categories, product }: Props) {
   const router = useRouter()
+  const isEdit = !!product
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [categoryId, setCategoryId] = useState("")
-  const [status, setStatus] = useState<"draft" | "active">("draft")
-  const [isFeatured, setIsFeatured] = useState(false)
-  const [tags, setTags] = useState("")
-  const [seoTitle, setSeoTitle] = useState("")
-  const [seoDescription, setSeoDescription] = useState("")
+  const [title, setTitle] = useState(product?.title ?? "")
+  const [description, setDescription] = useState(product?.description ?? "")
+  const [categoryId, setCategoryId] = useState(product?.category_id ?? "")
+  const [status, setStatus] = useState<"draft" | "active">(
+    (product?.status === "active" ? "active" : "draft")
+  )
+  const [isFeatured, setIsFeatured] = useState(product?.is_featured ?? false)
+  const [tags, setTags] = useState(product?.tags?.join(", ") ?? "")
+  const [seoTitle, setSeoTitle] = useState(product?.seo_title ?? "")
+  const [seoDescription, setSeoDescription] = useState(product?.seo_description ?? "")
 
-  const [images, setImages] = useState<{ url: string; alt: string }[]>([])
+  const [images, setImages] = useState<{ url: string; alt: string }[]>(product?.images ?? [])
   const [uploading, setUploading] = useState(false)
 
-  const [variants, setVariants] = useState<Variant[]>([emptyVariant()])
+  const [variants, setVariants] = useState<Variant[]>(
+    product?.variants?.length
+      ? product.variants.map(v => ({
+          title: v.title,
+          sku: v.sku ?? "",
+          price: String(v.price),
+          compare_at_price: v.compare_at_price != null ? String(v.compare_at_price) : "",
+          inventory: String(v.inventory ?? -1),
+          options: v.options ?? {},
+        }))
+      : [emptyVariant()]
+  )
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -76,6 +113,28 @@ export default function ProductForm({ categories }: Props) {
   const removeVariant = (i: number) =>
     setVariants((prev) => prev.filter((_, idx) => idx !== i))
 
+  const buildPayload = () => ({
+    title: title.trim(),
+    description: description.trim() || null,
+    category_id: categoryId || null,
+    tags: tags.split(",").map(t => t.trim()).filter(Boolean),
+    status,
+    is_featured: isFeatured,
+    images: images.map((img, i) => ({ ...img, position: i })),
+    seo_title: seoTitle.trim() || null,
+    seo_description: seoDescription.trim() || null,
+    variants: variants
+      .filter(v => v.title && v.price)
+      .map(v => ({
+        title: v.title,
+        sku: v.sku || null,
+        price: parseFloat(v.price),
+        compare_at_price: v.compare_at_price ? parseFloat(v.compare_at_price) : null,
+        inventory: parseInt(v.inventory) || -1,
+        options: v.options,
+      })),
+  })
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -88,30 +147,12 @@ export default function ProductForm({ categories }: Props) {
 
     setSaving(true)
     try {
-      const res = await fetch("/api/products", {
-        method: "POST",
+      const url = isEdit ? `/api/products/${product!.id}` : "/api/products"
+      const method = isEdit ? "PUT" : "POST"
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim() || null,
-          category_id: categoryId || null,
-          tags: tags.split(",").map(t => t.trim()).filter(Boolean),
-          status,
-          is_featured: isFeatured,
-          images: images.map((img, i) => ({ ...img, position: i })),
-          seo_title: seoTitle.trim() || null,
-          seo_description: seoDescription.trim() || null,
-          variants: variants
-            .filter(v => v.title && v.price)
-            .map(v => ({
-              title: v.title,
-              sku: v.sku || null,
-              price: parseFloat(v.price),
-              compare_at_price: v.compare_at_price ? parseFloat(v.compare_at_price) : null,
-              inventory: parseInt(v.inventory) || -1,
-              options: v.options,
-            })),
-        }),
+        body: JSON.stringify(buildPayload()),
       })
 
       const data = await res.json()
@@ -126,9 +167,25 @@ export default function ProductForm({ categories }: Props) {
     }
   }
 
+  const handleDelete = async () => {
+    if (!product || !confirm(`Delete "${product.title}"? This cannot be undone.`)) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/products/${product.id}`, { method: "DELETE" })
+      if (!res.ok) { const d = await res.json(); setError(d.error ?? "Failed to delete"); return }
+      router.push("/admin/products")
+      router.refresh()
+    } catch {
+      setError("Something went wrong. Please try again.")
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-8">
 
+      {/* Basic info */}
       <section className="bg-white rounded-xl border border-border p-6 flex flex-col gap-5">
         <h2 className="font-semibold text-base">Basic Information</h2>
 
@@ -202,6 +259,7 @@ export default function ProductForm({ categories }: Props) {
         </label>
       </section>
 
+      {/* Images */}
       <section className="bg-white rounded-xl border border-border p-6 flex flex-col gap-4">
         <h2 className="font-semibold text-base">Images</h2>
 
@@ -226,9 +284,10 @@ export default function ProductForm({ categories }: Props) {
           </label>
         </div>
 
-        <p className="text-xs text-muted-foreground">First image will be used as the product thumbnail.</p>
+        <p className="text-xs text-muted-foreground">First image will be used as the product thumbnail. Drag to reorder (coming soon).</p>
       </section>
 
+      {/* Variants */}
       <section className="bg-white rounded-xl border border-border p-6 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-base">Variants <span className="text-muted-foreground text-xs font-normal">(price, size, color, etc.)</span></h2>
@@ -316,6 +375,7 @@ export default function ProductForm({ categories }: Props) {
         </div>
       </section>
 
+      {/* SEO */}
       <section className="bg-white rounded-xl border border-border p-6 flex flex-col gap-4">
         <h2 className="font-semibold text-base">SEO <span className="text-muted-foreground text-xs font-normal">(optional)</span></h2>
         <div>
@@ -345,10 +405,10 @@ export default function ProductForm({ categories }: Props) {
         </div>
       )}
 
-      <div className="flex gap-3 pb-8">
+      <div className="flex items-center gap-3 pb-8">
         <button
           type="submit"
-          disabled={saving}
+          disabled={saving || deleting}
           className="bg-primary text-primary-foreground px-6 py-2.5 rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
           {saving ? "Saving..." : "Save Product"}
@@ -356,10 +416,21 @@ export default function ProductForm({ categories }: Props) {
         <button
           type="button"
           onClick={() => router.back()}
-          className="px-6 py-2.5 rounded-lg font-medium text-sm border border-border hover:bg-muted transition-colors"
+          disabled={saving || deleting}
+          className="px-6 py-2.5 rounded-lg font-medium text-sm border border-border hover:bg-muted transition-colors disabled:opacity-50"
         >
           Cancel
         </button>
+        {isEdit && (
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={saving || deleting}
+            className="ml-auto px-6 py-2.5 rounded-lg font-medium text-sm text-destructive border border-destructive/30 hover:bg-destructive/5 transition-colors disabled:opacity-50"
+          >
+            {deleting ? "Deleting..." : "Delete Product"}
+          </button>
+        )}
       </div>
     </form>
   )
