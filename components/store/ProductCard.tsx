@@ -9,9 +9,17 @@ interface Props {
 
 export default function ProductCard({ product }: Props) {
   const firstImage = product.images?.[0]
-  const lowestPrice = product.variants?.length
-    ? Math.min(...product.variants.map((v) => v.price))
+
+  const cheapestVariant = product.variants?.length
+    ? product.variants.reduce((a, b) => a.price <= b.price ? a : b)
     : null
+
+  const lowestPrice = cheapestVariant?.price ?? null
+  const compareAtPrice =
+    cheapestVariant?.compare_at_price &&
+    cheapestVariant.compare_at_price > (cheapestVariant.price ?? 0)
+      ? cheapestVariant.compare_at_price
+      : null
 
   return (
     <Link href={`/products/${product.slug}`} className="group">
@@ -34,9 +42,16 @@ export default function ProductCard({ product }: Props) {
         {product.title}
       </h3>
       {lowestPrice !== null && (
-        <p className="text-sm text-muted-foreground">
-          From {formatPrice(lowestPrice, "USD")}
-        </p>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">
+            {(product.variants?.length ?? 0) > 1 ? "From " : ""}{formatPrice(lowestPrice, "USD")}
+          </span>
+          {compareAtPrice && (
+            <span className="text-sm text-muted-foreground line-through">
+              {formatPrice(compareAtPrice, "USD")}
+            </span>
+          )}
+        </div>
       )}
     </Link>
   )
