@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   let response = NextResponse.next({ request })
 
@@ -28,7 +28,6 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Protect admin routes
   if (pathname.startsWith("/admin")) {
     if (!user || user.email !== process.env.ADMIN_EMAIL) {
       return NextResponse.redirect(new URL("/auth/login?next=/admin", request.url))
