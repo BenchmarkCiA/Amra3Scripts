@@ -9,6 +9,7 @@ import type { Product } from "@/types"
 interface Props {
   country: Country
   products: Product[]
+  heroImageUrl?: string | null
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -37,7 +38,7 @@ function Flag({ code, width, height }: { code: string; width: number; height: nu
   )
 }
 
-export default function CountryStorefront({ country, products }: Props) {
+export default function CountryStorefront({ country, products, heroImageUrl }: Props) {
   const router = useRouter()
 
   const isHe = country.code === "il"
@@ -424,51 +425,67 @@ export default function CountryStorefront({ country, products }: Props) {
           </div>
         </div>
 
-        {/* Campaign image placeholder */}
+        {/* Campaign image */}
         <div
           style={{
             flex: "1 1 340px",
             minWidth: 340,
             position: "relative",
-            background: `repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 2px, transparent 2px 16px)`,
+            background: heroImageUrl
+              ? "#14161a"
+              : `repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 2px, transparent 2px 16px)`,
             minHeight: 420,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            overflow: "hidden",
           }}
         >
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: `linear-gradient(180deg, transparent, ${glowColor})`,
-              pointerEvents: "none",
-            }}
-          />
-          <div style={{ textAlign: "center", position: "relative", zIndex: 1 }}>
-            <div
-              style={{
-                fontFamily: "var(--font-oswald), Arial, sans-serif",
-                fontWeight: 600,
-                fontSize: 13,
-                letterSpacing: "0.26em",
-                color: "rgba(244,241,234,0.35)",
-                textTransform: "uppercase",
-                marginBottom: 10,
-              }}
-            >
-              LIFESTYLE · CAMPAIGN
-            </div>
-            <div
-              style={{
-                fontFamily: "var(--font-heebo), Arial, sans-serif",
-                fontSize: 15,
-                color: "rgba(244,241,234,0.25)",
-              }}
-            >
-              {t.campaignPlaceholder}
-            </div>
-          </div>
+          {heroImageUrl ? (
+            <Image
+              src={heroImageUrl}
+              alt=""
+              fill
+              style={{ objectFit: "cover" }}
+              sizes="(max-width: 768px) 100vw, 50vw"
+              priority
+            />
+          ) : (
+            <>
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: `linear-gradient(180deg, transparent, ${glowColor})`,
+                  pointerEvents: "none",
+                }}
+              />
+              <div style={{ textAlign: "center", position: "relative", zIndex: 1 }}>
+                <div
+                  style={{
+                    fontFamily: "var(--font-oswald), Arial, sans-serif",
+                    fontWeight: 600,
+                    fontSize: 13,
+                    letterSpacing: "0.26em",
+                    color: "rgba(244,241,234,0.35)",
+                    textTransform: "uppercase",
+                    marginBottom: 10,
+                  }}
+                >
+                  LIFESTYLE · CAMPAIGN
+                </div>
+                <div
+                  style={{
+                    fontFamily: "var(--font-heebo), Arial, sans-serif",
+                    fontSize: 15,
+                    color: "rgba(244,241,234,0.25)",
+                  }}
+                >
+                  {t.campaignPlaceholder}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </section>
 

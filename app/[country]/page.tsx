@@ -19,15 +19,23 @@ export default async function CountryPage({
   }
 
   const supabase = await createClient()
-  const { data: products } = await supabase
-    .from("products")
-    .select("*, variants:product_variants(*), category:categories(*)")
-    .eq("status", "active")
+  const [productsResult, settingsResult] = await Promise.all([
+    supabase
+      .from("products")
+      .select("*, variants:product_variants(*), category:categories(*)")
+      .eq("status", "active"),
+    supabase
+      .from("country_settings")
+      .select("hero_image_url")
+      .eq("country_code", code)
+      .single(),
+  ])
 
   return (
     <CountryStorefront
       country={COUNTRIES[code]}
-      products={(products ?? []) as Product[]}
+      products={(productsResult.data ?? []) as Product[]}
+      heroImageUrl={settingsResult.data?.hero_image_url ?? null}
     />
   )
 }

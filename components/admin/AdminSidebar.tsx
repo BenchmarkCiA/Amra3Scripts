@@ -9,6 +9,7 @@ import {
   Users,
   RefreshCw,
   Store,
+  Globe,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -18,6 +19,7 @@ const nav = [
   { href: "/admin/products/printify", label: "Printify Sync", icon: RefreshCw },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { href: "/admin/customers", label: "Customers", icon: Users },
+  { href: "/admin/country-settings", label: "Storefronts", icon: Globe },
 ]
 
 export default function AdminSidebar() {
