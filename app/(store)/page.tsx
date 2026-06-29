@@ -4,18 +4,16 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { COUNTRIES, isValidCountry, type CountryCode, type Country } from "@/lib/countries"
 
-function FlagEmoji({ emoji, size }: { emoji: string; size: number }) {
+function Flag({ code, width, height }: { code: string; width: number; height: number }) {
   return (
-    <span
-      style={{
-        fontSize: size,
-        lineHeight: 1,
-        display: "inline-block",
-        fontFamily: "Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif",
-      }}
-    >
-      {emoji}
-    </span>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`https://flagcdn.com/w80/${code}.png`}
+      alt=""
+      width={width}
+      height={height}
+      style={{ display: "block", objectFit: "cover", borderRadius: 3 }}
+    />
   )
 }
 
@@ -72,6 +70,7 @@ function CountryGateUI() {
           zIndex: 0,
         }}
       >
+        {/* Radial gradient 1 */}
         <div
           style={{
             position: "absolute",
@@ -80,10 +79,12 @@ function CountryGateUI() {
             width: "60vw",
             height: "60vw",
             borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(35,86,199,0.18) 0%, transparent 70%)",
+            background:
+              "radial-gradient(circle, rgba(35,86,199,0.18) 0%, transparent 70%)",
             opacity: 0.5,
           }}
         />
+        {/* Radial gradient 2 */}
         <div
           style={{
             position: "absolute",
@@ -92,7 +93,8 @@ function CountryGateUI() {
             width: "50vw",
             height: "50vw",
             borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(192,32,46,0.15) 0%, transparent 70%)",
+            background:
+              "radial-gradient(circle, rgba(192,32,46,0.15) 0%, transparent 70%)",
             opacity: 0.5,
           }}
         />
@@ -126,15 +128,43 @@ function CountryGateUI() {
             padding: "20px clamp(20px,4vw,56px)",
           }}
         >
+          {/* Brand lockup */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
-            <span style={{ fontFamily: "var(--font-heebo), Arial, sans-serif", fontWeight: 900, fontSize: 22, color: "#f4f1ea", lineHeight: 1 }}>
+            <span
+              style={{
+                fontFamily: "var(--font-heebo), Arial, sans-serif",
+                fontWeight: 900,
+                fontSize: 22,
+                color: "#f4f1ea",
+                lineHeight: 1,
+              }}
+            >
               עוצמה
             </span>
-            <span style={{ fontFamily: "var(--font-oswald), Arial, sans-serif", fontWeight: 600, fontSize: 13, letterSpacing: "0.28em", color: "rgba(244,241,234,0.45)", lineHeight: 1 }}>
+            <span
+              style={{
+                fontFamily: "var(--font-oswald), Arial, sans-serif",
+                fontWeight: 600,
+                fontSize: 13,
+                letterSpacing: "0.28em",
+                color: "rgba(244,241,234,0.45)",
+                lineHeight: 1,
+              }}
+            >
               OTZMA
             </span>
           </div>
-          <div style={{ border: "1px solid rgba(244,241,234,0.2)", borderRadius: 9999, padding: "5px 14px", fontSize: 12, color: "rgba(244,241,234,0.45)" }}>
+
+          {/* Placeholder badge */}
+          <div
+            style={{
+              border: "1px solid rgba(244,241,234,0.2)",
+              borderRadius: 9999,
+              padding: "5px 14px",
+              fontSize: 12,
+              color: "rgba(244,241,234,0.45)",
+            }}
+          >
             שם ולוגו זמניים
           </div>
         </div>
@@ -154,6 +184,7 @@ function CountryGateUI() {
             textAlign: "center",
           }}
         >
+          {/* Eyebrow */}
           <div
             style={{
               fontFamily: "var(--font-oswald), Arial, sans-serif",
@@ -168,6 +199,7 @@ function CountryGateUI() {
             ENTER · בחר את הדגל שלך
           </div>
 
+          {/* H1 */}
           <h1
             style={{
               fontFamily: "var(--font-heebo), Arial, sans-serif",
@@ -183,6 +215,7 @@ function CountryGateUI() {
             לאיזו מדינה אתה שייך?
           </h1>
 
+          {/* Lead */}
           <p
             style={{
               fontSize: "clamp(16px,1.5vw,21px)",
@@ -218,8 +251,12 @@ function CountryGateUI() {
                     alignItems: "center",
                     gap: 14,
                     padding: "18px 20px",
-                    background: isHovered ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.025)",
-                    border: isHovered ? "1px solid rgba(244,241,234,0.4)" : "1px solid rgba(244,241,234,0.12)",
+                    background: isHovered
+                      ? "rgba(255,255,255,0.06)"
+                      : "rgba(255,255,255,0.025)",
+                    border: isHovered
+                      ? "1px solid rgba(244,241,234,0.4)"
+                      : "1px solid rgba(244,241,234,0.12)",
                     borderRadius: 4,
                     cursor: "pointer",
                     textAlign: "right",
@@ -229,23 +266,52 @@ function CountryGateUI() {
                     width: "100%",
                   }}
                 >
-                  {/* Flag emoji */}
-                  <div style={{ width: 52, height: 36, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <FlagEmoji emoji={country.emoji} size={34} />
+                  {/* Flag */}
+                  <div style={{ flexShrink: 0, lineHeight: 0 }}>
+                    <Flag code={country.code} width={52} height={35} />
                   </div>
 
                   {/* Name block */}
                   <div style={{ flex: 1, textAlign: "right" }}>
-                    <div style={{ fontFamily: "var(--font-heebo), Arial, sans-serif", fontWeight: 800, fontSize: 19, color: "#f4f1ea", lineHeight: 1.1 }}>
+                    <div
+                      style={{
+                        fontFamily: "var(--font-heebo), Arial, sans-serif",
+                        fontWeight: 800,
+                        fontSize: 19,
+                        color: "#f4f1ea",
+                        lineHeight: 1.1,
+                      }}
+                    >
                       {country.nameHe}
                     </div>
-                    <div style={{ fontFamily: "var(--font-oswald), Arial, sans-serif", fontWeight: 500, fontSize: 12, letterSpacing: "0.18em", color: "rgba(244,241,234,0.45)", marginTop: 2 }}>
+                    <div
+                      style={{
+                        fontFamily: "var(--font-oswald), Arial, sans-serif",
+                        fontWeight: 500,
+                        fontSize: 12,
+                        letterSpacing: "0.18em",
+                        color: "rgba(244,241,234,0.45)",
+                        marginTop: 2,
+                      }}
+                    >
                       {country.en}
                     </div>
                   </div>
 
                   {/* Code chip */}
-                  <div style={{ fontFamily: "var(--font-oswald), Arial, sans-serif", fontWeight: 700, fontSize: 13, border: "1px solid rgba(244,241,234,0.25)", borderRadius: 3, padding: "3px 7px", color: "rgba(244,241,234,0.6)", textTransform: "uppercase", flexShrink: 0 }}>
+                  <div
+                    style={{
+                      fontFamily: "var(--font-oswald), Arial, sans-serif",
+                      fontWeight: 700,
+                      fontSize: 13,
+                      border: "1px solid rgba(244,241,234,0.25)",
+                      borderRadius: 3,
+                      padding: "3px 7px",
+                      color: "rgba(244,241,234,0.6)",
+                      textTransform: "uppercase",
+                      flexShrink: 0,
+                    }}
+                  >
                     {country.code}
                   </div>
                 </button>
@@ -253,7 +319,15 @@ function CountryGateUI() {
             })}
           </div>
 
-          <p style={{ marginTop: 32, fontSize: 12, color: "rgba(244,241,234,0.3)", textAlign: "center" }}>
+          {/* Footnote */}
+          <p
+            style={{
+              marginTop: 32,
+              fontSize: 12,
+              color: "rgba(244,241,234,0.3)",
+              textAlign: "center",
+            }}
+          >
             קונספט · המסך הראשי משתנה לפי המדינה שנבחרה
           </p>
         </div>
