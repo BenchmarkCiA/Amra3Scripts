@@ -6,10 +6,21 @@ import Image from "next/image"
 import { type Country, formatCountryPrice } from "@/lib/countries"
 import type { Product } from "@/types"
 
+interface ContentOverrides {
+  announcement?: string
+  heroH1a?: string
+  heroH1b?: string
+  heroLead?: string
+  heroCta1?: string
+  heroCta2?: string
+  collectionTitle?: string
+}
+
 interface Props {
   country: Country
   products: Product[]
   heroImageUrl?: string | null
+  contentOverrides?: ContentOverrides | null
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -38,7 +49,7 @@ function Flag({ code, width, height }: { code: string; width: number; height: nu
   )
 }
 
-export default function CountryStorefront({ country, products, heroImageUrl }: Props) {
+export default function CountryStorefront({ country, products, heroImageUrl, contentOverrides }: Props) {
   const router = useRouter()
 
   const isHe = country.code === "il"
@@ -133,6 +144,12 @@ export default function CountryStorefront({ country, products, heroImageUrl }: P
         footerSwitch: "Switch country",
       }
 
+  // Merge stored overrides over code defaults (empty string = use default)
+  const overrides = Object.fromEntries(
+    Object.entries(contentOverrides ?? {}).filter(([, v]) => v && (v as string).trim())
+  )
+  const c = { ...t, ...overrides }
+
   const [filter, setFilter] = useState<string>("all")
   const [customText, setCustomText] = useState(t.defaultText)
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
@@ -175,7 +192,7 @@ export default function CountryStorefront({ country, products, heroImageUrl }: P
           textAlign: "center",
         }}
       >
-        {t.announcement}
+        {c.announcement}
       </div>
 
       {/* ── Sticky header ── */}
@@ -340,8 +357,8 @@ export default function CountryStorefront({ country, products, heroImageUrl }: P
               color: "#f4f1ea",
             }}
           >
-            {t.heroH1a}{" "}
-            <span style={{ display: "block" }}>{t.heroH1b}</span>
+            {c.heroH1a}{" "}
+            <span style={{ display: "block" }}>{c.heroH1b}</span>
           </h1>
 
           {/* Lead */}
@@ -354,7 +371,7 @@ export default function CountryStorefront({ country, products, heroImageUrl }: P
               fontSize: "clamp(15px,1.3vw,18px)",
             }}
           >
-            {t.heroLead}
+            {c.heroLead}
           </p>
 
           {/* Buttons */}
@@ -373,7 +390,7 @@ export default function CountryStorefront({ country, products, heroImageUrl }: P
                 display: "inline-block",
               }}
             >
-              {t.heroCta1}
+              {c.heroCta1}
             </a>
             <a
               href="#customizer"
@@ -390,7 +407,7 @@ export default function CountryStorefront({ country, products, heroImageUrl }: P
                 background: "transparent",
               }}
             >
-              {t.heroCta2}
+              {c.heroCta2}
             </a>
           </div>
 
@@ -531,7 +548,7 @@ export default function CountryStorefront({ country, products, heroImageUrl }: P
                   color: "#14161a",
                 }}
               >
-                {t.collectionTitle}
+                {c.collectionTitle}
               </h2>
             </div>
 

@@ -99,6 +99,7 @@ export default function CountryContentForm({ country, initialContent, initialSeo
     setSaving(true)
     setStatus("idle")
     try {
+      // Strip empty strings so defaults are used for blank fields
       const cleanContent = Object.fromEntries(
         Object.entries(content).filter(([, v]) => v && v.trim())
       ) as ContentOverrides
