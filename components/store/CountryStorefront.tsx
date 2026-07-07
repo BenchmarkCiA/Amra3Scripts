@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { type Country, formatCountryPrice } from "@/lib/countries"
 import type { Product } from "@/types"
+import SocialIcons, { type SocialLinks } from "@/components/store/SocialIcons"
+import CartDrawer from "@/components/store/CartDrawer"
+import { useCart } from "@/hooks/useCart"
 
 interface ContentOverrides {
   announcement?: string
@@ -21,6 +24,7 @@ interface Props {
   products: Product[]
   heroImageUrl?: string | null
   contentOverrides?: ContentOverrides | null
+  socialLinks?: SocialLinks | null
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -49,8 +53,10 @@ function Flag({ code, width, height }: { code: string; width: number; height: nu
   )
 }
 
-export default function CountryStorefront({ country, products, heroImageUrl, contentOverrides }: Props) {
+export default function CountryStorefront({ country, products, heroImageUrl, contentOverrides, socialLinks }: Props) {
   const router = useRouter()
+  const { itemCount, openCart } = useCart()
+  const cartCount = itemCount()
 
   const isHe = country.code === "il"
   const dir = isHe ? ("rtl" as const) : ("ltr" as const)
@@ -96,7 +102,7 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
         customizerLabel: "הכיתוב שלך",
         defaultText: "השם שלך",
         previewLabel: "TEE · PREVIEW",
-        previewCaption: "תצוגה מקדימה · אזור ההדפסה",
+        previewCaption: "תצוגה מקדימית · אזור ההדפסה",
         footerBadge: "שם ולוגו זמניים",
         footerViewing: `גולש מ${country.shipLabel} · ${country.currency.name}`,
         footerSwitch: "החלף מדינה",
@@ -286,13 +292,57 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
             <span style={{ color: "rgba(17,19,22,0.45)" }}>{t.switchSuffix}</span>
           </button>
 
+          {/* Cart icon */}
           <button
+            onClick={openCart}
             style={{
               width: 40,
               height: 40,
               borderRadius: "50%",
               background: "#14161a",
               color: "#f4f1ea",
+              border: "none",
+              cursor: "pointer",
+              fontSize: 16,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              position: "relative",
+            }}
+            aria-label="Cart"
+          >
+            🛒
+            {cartCount > 0 && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: -4,
+                  right: -4,
+                  background: accentHex,
+                  color: "#fff",
+                  borderRadius: "50%",
+                  width: 18,
+                  height: 18,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  lineHeight: 1,
+                }}
+              >
+                {cartCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: "rgba(17,19,22,0.08)",
+              color: "#14161a",
               border: "none",
               cursor: "pointer",
               fontSize: 16,
@@ -1068,29 +1118,36 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <Flag code={country.code} width={28} height={19} />
-            <span style={{ fontSize: 13, color: "rgba(244,241,234,0.45)" }}>
-              {t.footerViewing}
-            </span>
-            <button
-              onClick={switchCountry}
-              style={{
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                color: accentHex,
-                fontSize: 13,
-                fontWeight: 600,
-                fontFamily: "var(--font-heebo), Arial, sans-serif",
-                padding: 0,
-              }}
-            >
-              {t.footerSwitch}
-            </button>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: isHe ? "flex-end" : "flex-start" }}>
+            {socialLinks && (
+              <SocialIcons links={socialLinks} size="sm" onDark />
+            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <Flag code={country.code} width={28} height={19} />
+              <span style={{ fontSize: 13, color: "rgba(244,241,234,0.45)" }}>
+                {t.footerViewing}
+              </span>
+              <button
+                onClick={switchCountry}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: accentHex,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  fontFamily: "var(--font-heebo), Arial, sans-serif",
+                  padding: 0,
+                }}
+              >
+                {t.footerSwitch}
+              </button>
+            </div>
           </div>
         </div>
       </footer>
+
+      <CartDrawer />
     </div>
   )
 }
