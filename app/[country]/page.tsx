@@ -52,7 +52,7 @@ export default async function CountryPage({
   }
 
   const supabase = await createClient()
-  const [productsResult, settingsResult] = await Promise.all([
+  const [productsResult, settingsResult, siteSettingsResult] = await Promise.all([
     supabase
       .from("products")
       .select("*, variants:product_variants(*), category:categories(*)")
@@ -62,6 +62,11 @@ export default async function CountryPage({
       .select("hero_image_url, content")
       .eq("country_code", code)
       .single(),
+    supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "social_links")
+      .single(),
   ])
 
   return (
@@ -70,6 +75,7 @@ export default async function CountryPage({
       products={(productsResult.data ?? []) as Product[]}
       heroImageUrl={settingsResult.data?.hero_image_url ?? null}
       contentOverrides={settingsResult.data?.content ?? null}
+      socialLinks={siteSettingsResult.data?.value ?? null}
     />
   )
 }

@@ -16,6 +16,7 @@ export default function ProductVariants({ product }: Props) {
   )
   const [adding, setAdding] = useState(false)
   const [added, setAdded] = useState(false)
+  const [customText, setCustomText] = useState("")
   const { addItem } = useCart()
 
   const optionKeys = selected
@@ -37,7 +38,7 @@ export default function ProductVariants({ product }: Props) {
   const handleAddToCart = async () => {
     if (!selected) return
     setAdding(true)
-    await addItem(product.id, selected.id, 1)
+    await addItem(product.id, selected.id, 1, customText.trim() || undefined)
     setAdding(false)
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
@@ -88,6 +89,22 @@ export default function ProductVariants({ product }: Props) {
           </div>
         </div>
       ))}
+
+      {/* Personal text (kituv ishi) */}
+      <div>
+        <label className="block text-sm font-medium mb-1.5">
+          Personal text <span className="text-muted-foreground font-normal">(printed on item)</span>
+        </label>
+        <input
+          type="text"
+          value={customText}
+          onChange={(e) => setCustomText(e.target.value)}
+          maxLength={22}
+          placeholder="Your name, date, or message…"
+          className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
+        />
+        <p className="text-xs text-muted-foreground mt-1">{customText.length}/22 characters</p>
+      </div>
 
       {/* Add to cart */}
       <button

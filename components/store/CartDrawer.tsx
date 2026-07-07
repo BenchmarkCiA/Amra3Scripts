@@ -54,6 +54,9 @@ export default function CartDrawer() {
                     {item.variant_title && (
                       <p className="text-xs text-muted-foreground">{item.variant_title}</p>
                     )}
+                    {item.customText && (
+                      <p className="text-xs text-accent font-medium mt-0.5">✏ {item.customText}</p>
+                    )}
                     <p className="text-sm font-semibold mt-1">{formatPrice(item.price, "USD")}</p>
                     <div className="flex items-center gap-2 mt-2">
                       <button

@@ -1,29 +1,45 @@
 import { stripe } from "./client"
-import type { CartItem } from "@/types"
+
+interface FlatCartItem {
+  product_id: string
+  variant_id: string
+  quantity: number
+  title?: string
+  variant_title?: string
+  price?: number
+  image_url?: string
+  customText?: string
+  product?: { title?: string; images?: Array<{ url: string }> }
+  variant?: { title?: string; price?: number }
+}
 
 export async function createCheckoutSession(
-  items: CartItem[],
+  items: FlatCartItem[],
   customerEmail?: string
 ) {
-  const line_items = items.map((item) => ({
-    price_data: {
-      currency: "usd",
-      product_data: {
-        name: item.variant?.title
-          ? `${item.product?.title} — ${item.variant.title}`
-          : item.product?.title ?? "Product",
-        images: item.product?.images?.[0]?.url
-          ? [item.product.images[0].url]
-          : [],
-        metadata: {
-          product_id: item.product_id,
-          variant_id: item.variant_id,
+  const line_items = items.map((item) => {
+    const productTitle = item.title ?? item.product?.title ?? "Product"
+    const variantTitle = item.variant_title ?? item.variant?.title
+    const name = variantTitle ? `${productTitle} — ${variantTitle}` : productTitle
+    const imageUrl = item.image_url ?? item.product?.images?.[0]?.url
+    const unitAmount = Math.round((item.price ?? item.variant?.price ?? 0) * 100)
+
+    return {
+      price_data: {
+        currency: "usd",
+        product_data: {
+          name,
+          images: imageUrl ? [imageUrl] : [],
+          metadata: {
+            product_id: item.product_id,
+            variant_id: item.variant_id,
+          },
         },
+        unit_amount: unitAmount,
       },
-      unit_amount: Math.round((item.variant?.price ?? 0) * 100),
-    },
-    quantity: item.quantity,
-  }))
+      quantity: item.quantity,
+    }
+  })
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -40,6 +56,7 @@ export async function createCheckoutSession(
           product_id: i.product_id,
           variant_id: i.variant_id,
           quantity: i.quantity,
+          customText: i.customText,
         }))
       ),
     },

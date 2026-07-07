@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Store,
   Globe,
+  Settings,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -20,6 +21,7 @@ const nav = [
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/country-settings", label: "Storefronts", icon: Globe },
+  { href: "/admin/site-settings", label: "Site Settings", icon: Settings },
 ]
 
 export default function AdminSidebar() {

@@ -11,12 +11,13 @@ interface CartItem {
   variant_title: string
   price: number
   image_url?: string
+  customText?: string
 }
 
 interface CartStore {
   items: CartItem[]
   isOpen: boolean
-  addItem: (product_id: string, variant_id: string, quantity: number) => Promise<void>
+  addItem: (product_id: string, variant_id: string, quantity: number, customText?: string) => Promise<void>
   removeItem: (variant_id: string) => void
   updateQuantity: (variant_id: string, quantity: number) => void
   clearCart: () => void
@@ -32,7 +33,7 @@ export const useCart = create<CartStore>()(
       items: [],
       isOpen: false,
 
-      addItem: async (product_id, variant_id, quantity) => {
+      addItem: async (product_id, variant_id, quantity, customText?) => {
         const res = await fetch("/api/cart", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -40,19 +41,20 @@ export const useCart = create<CartStore>()(
         })
         const data = await res.json()
         if (data.item) {
+          const item = { ...data.item, ...(customText ? { customText } : {}) }
           set((state) => {
             const existing = state.items.find((i) => i.variant_id === variant_id)
             if (existing) {
               return {
                 items: state.items.map((i) =>
                   i.variant_id === variant_id
-                    ? { ...i, quantity: i.quantity + quantity }
+                    ? { ...i, quantity: i.quantity + quantity, ...(customText ? { customText } : {}) }
                     : i
                 ),
                 isOpen: true,
               }
             }
-            return { items: [...state.items, data.item], isOpen: true }
+            return { items: [...state.items, item], isOpen: true }
           })
         }
       },

@@ -64,6 +64,9 @@ export default function CheckoutPage() {
                     {item.variant_title && (
                       <p className="text-xs text-muted-foreground">{item.variant_title}</p>
                     )}
+                    {item.customText && (
+                      <p className="text-xs text-accent font-medium">✏ {item.customText}</p>
+                    )}
                     <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
                   </div>
                 </div>
