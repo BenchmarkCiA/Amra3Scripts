@@ -15,7 +15,9 @@ interface FlatCartItem {
 
 export async function createCheckoutSession(
   items: FlatCartItem[],
-  customerEmail?: string
+  customerEmail?: string,
+  discountAmount?: number,
+  couponCode?: string
 ) {
   const line_items = items.map((item) => {
     const productTitle = item.title ?? item.product?.title ?? "Product"
@@ -41,9 +43,21 @@ export async function createCheckoutSession(
     }
   })
 
+  let discounts: Array<{ coupon: string }> | undefined
+  if (discountAmount && discountAmount > 0) {
+    const stripeCoupon = await stripe.coupons.create({
+      amount_off: Math.round(discountAmount * 100),
+      currency: "usd",
+      duration: "once",
+      name: couponCode ?? "Discount",
+    })
+    discounts = [{ coupon: stripeCoupon.id }]
+  }
+
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     line_items,
+    discounts,
     customer_email: customerEmail,
     success_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/cart`,

@@ -1,14 +1,15 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useCart } from "@/hooks/useCart"
 import { formatPrice } from "@/lib/utils/currency"
 
 export default function CheckoutPage() {
-  const { items, total } = useCart()
+  const { items, total, couponCode, discountAmount } = useCart()
   const [loading, setLoading] = useState(false)
 
   const cartTotal = total()
+  const finalTotal = Math.max(0, cartTotal - discountAmount)
 
   const handleCheckout = async () => {
     setLoading(true)
@@ -16,7 +17,7 @@ export default function CheckoutPage() {
       const res = await fetch("/api/orders/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items }),
+        body: JSON.stringify({ items, couponCode }),
       })
       const data = await res.json()
       if (data.url) {
@@ -65,7 +66,7 @@ export default function CheckoutPage() {
                       <p className="text-xs text-muted-foreground">{item.variant_title}</p>
                     )}
                     {item.customText && (
-                      <p className="text-xs text-accent font-medium">✏ {item.customText}</p>
+                      <p className="text-xs text-accent font-medium">&#9999; {item.customText}</p>
                     )}
                     <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
                   </div>
@@ -77,9 +78,23 @@ export default function CheckoutPage() {
             ))}
           </ul>
 
-          <div className="border-t border-border pt-4 flex justify-between font-bold text-lg">
-            <span>Total</span>
-            <span>{formatPrice(cartTotal, "USD")}</span>
+          <div className="border-t border-border pt-4 space-y-2">
+            {couponCode && discountAmount > 0 && (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span>{formatPrice(cartTotal, "USD")}</span>
+                </div>
+                <div className="flex justify-between text-sm text-green-700 font-medium">
+                  <span>Coupon ({couponCode})</span>
+                  <span>&minus;{formatPrice(discountAmount, "USD")}</span>
+                </div>
+              </>
+            )}
+            <div className="flex justify-between font-bold text-lg">
+              <span>Total</span>
+              <span>{formatPrice(finalTotal, "USD")}</span>
+            </div>
           </div>
         </div>
 
@@ -93,7 +108,7 @@ export default function CheckoutPage() {
             disabled={loading}
             className="w-full bg-primary text-primary-foreground py-4 rounded-xl font-semibold text-base hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
-            {loading ? "Redirecting..." : `Pay ${formatPrice(cartTotal, "USD")}`}
+            {loading ? "Redirecting..." : `Pay ${formatPrice(finalTotal, "USD")}`}
           </button>
         </div>
       </div>
