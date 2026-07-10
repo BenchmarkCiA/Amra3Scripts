@@ -32,7 +32,7 @@ export async function syncPrintifyProducts(): Promise<{ synced: number; errors: 
   let page = 1
 
   while (true) {
-    const data = await printify.get(`/shops/${shopId}/products.json?page=${page}&limit=100`)
+    const data = await printify.get(`/shops/${shopId}/products.json?page=${page}&limit=50`)
     const products: PrintifyProduct[] = data.data
 
     if (!products?.length) break
@@ -107,7 +107,7 @@ export async function syncPrintifyProducts(): Promise<{ synced: number; errors: 
       }
     }
 
-    if (products.length < 100) break
+    if (products.length < 50) break
     page++
   }
 
