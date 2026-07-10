@@ -14,7 +14,8 @@ export async function POST(request: NextRequest) {
     const result = await syncPrintifyProducts()
     return NextResponse.json(result)
   } catch (err) {
-    console.error("Sync error:", err)
-    return NextResponse.json({ error: "Sync failed" }, { status: 500 })
+    const message = err instanceof Error ? err.message : String(err)
+    console.error("Sync error:", message)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
