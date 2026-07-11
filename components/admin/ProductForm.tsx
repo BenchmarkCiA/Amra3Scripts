@@ -16,6 +16,15 @@ interface Variant {
   options: Record<string, string>
 }
 
+const ALL_REGIONS = [
+  { code: "il", label: "🇮🇱 Israel" },
+  { code: "us", label: "🇺🇸 United States" },
+  { code: "gb", label: "🇬🇧 United Kingdom" },
+  { code: "de", label: "🇩🇪 Germany" },
+  { code: "fr", label: "🇫🇷 France" },
+  { code: "it", label: "🇮🇹 Italy" },
+]
+
 interface InitialProduct {
   id: string
   title: string
@@ -27,6 +36,7 @@ interface InitialProduct {
   images: { url: string; alt: string }[]
   seo_title: string | null
   seo_description: string | null
+  country_codes: string[] | null
   variants: {
     title: string
     sku: string | null
@@ -70,6 +80,7 @@ export default function ProductForm({ categories, product }: Props) {
   const [seoDescription, setSeoDescription] = useState(product?.seo_description ?? "")
 
   const [images, setImages] = useState<{ url: string; alt: string }[]>(product?.images ?? [])
+  const [selectedRegions, setSelectedRegions] = useState<string[]>(product?.country_codes ?? [])
   const [uploading, setUploading] = useState(false)
 
   const [variants, setVariants] = useState<Variant[]>(
@@ -113,6 +124,11 @@ export default function ProductForm({ categories, product }: Props) {
   const removeVariant = (i: number) =>
     setVariants((prev) => prev.filter((_, idx) => idx !== i))
 
+  const toggleRegion = (code: string) =>
+    setSelectedRegions(prev =>
+      prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
+    )
+
   const buildPayload = () => ({
     title: title.trim(),
     description: description.trim() || null,
@@ -123,6 +139,7 @@ export default function ProductForm({ categories, product }: Props) {
     images: images.map((img, i) => ({ ...img, position: i })),
     seo_title: seoTitle.trim() || null,
     seo_description: seoDescription.trim() || null,
+    country_codes: selectedRegions.length ? selectedRegions : null,
     variants: variants
       .filter(v => v.title && v.price)
       .map(v => ({
@@ -373,6 +390,34 @@ export default function ProductForm({ categories, product }: Props) {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Regions */}
+      <section className="bg-white rounded-xl border border-border p-6 flex flex-col gap-4">
+        <div>
+          <h2 className="font-semibold text-base">Regions</h2>
+          <p className="text-xs text-muted-foreground mt-1">
+            Leave all unchecked to show in every storefront. Check specific countries to restrict visibility.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {ALL_REGIONS.map(region => (
+            <label key={region.code} className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded-lg border border-border hover:bg-muted transition-colors">
+              <input
+                type="checkbox"
+                checked={selectedRegions.includes(region.code)}
+                onChange={() => toggleRegion(region.code)}
+                className="w-4 h-4"
+              />
+              {region.label}
+            </label>
+          ))}
+        </div>
+        {selectedRegions.length > 0 && (
+          <p className="text-xs text-accent font-medium">
+            Visible in: {selectedRegions.map(c => ALL_REGIONS.find(r => r.code === c)?.label).join(", ")}
+          </p>
+        )}
       </section>
 
       {/* SEO */}

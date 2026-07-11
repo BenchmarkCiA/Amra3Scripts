@@ -20,7 +20,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
   try {
     const body = await request.json()
-    const { title, description, category_id, tags, status, is_featured, images, seo_title, seo_description, variants } = body
+    const { title, description, category_id, tags, status, is_featured, images, seo_title, seo_description, variants, country_codes } = body
 
     if (!title || !variants?.length) {
       return NextResponse.json({ error: "Title and at least one variant are required" }, { status: 400 })
@@ -42,6 +42,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
         images: images || [],
         seo_title: seo_title || null,
         seo_description: seo_description || null,
+        country_codes: country_codes?.length ? country_codes : null,
       })
       .eq("id", id)
       .select()
@@ -102,6 +103,6 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     return NextResponse.json({ success: true })
   } catch (err) {
     console.error("Delete product error:", err)
-    return NextResponse.json({ error: "Failed to delete product" }, { status: 500 })
+    return NextResponse.json({ error: "Failed to update product" }, { status: 500 })
   }
 }

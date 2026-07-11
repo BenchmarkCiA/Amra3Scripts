@@ -15,7 +15,7 @@ export default async function EditProductPage({ params }: Props) {
   const [{ data: product }, { data: categories }] = await Promise.all([
     supabase
       .from("products")
-      .select("*, variants:product_variants(*)")
+      .select("*, variants:product_variants(*), country_codes")
       .eq("id", id)
       .single(),
     supabase
@@ -51,6 +51,7 @@ export default async function EditProductPage({ params }: Props) {
           images: product.images ?? [],
           seo_title: product.seo_title,
           seo_description: product.seo_description,
+          country_codes: product.country_codes ?? null,
           variants: (product.variants ?? []).map((v: {
             title: string
             sku: string | null

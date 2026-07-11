@@ -56,7 +56,8 @@ export default async function CountryPage({
     supabase
       .from("products")
       .select("*, variants:product_variants(*), category:categories(*)")
-      .eq("status", "active"),
+      .eq("status", "active")
+      .or(`country_codes.is.null,country_codes.cs.["${code}"]`),
     supabase
       .from("country_settings")
       .select("hero_image_url, content")
