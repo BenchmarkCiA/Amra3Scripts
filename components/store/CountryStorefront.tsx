@@ -19,12 +19,19 @@ interface ContentOverrides {
   collectionTitle?: string
 }
 
+interface StoreCategory {
+  id: string
+  name: string
+  slug: string
+}
+
 interface Props {
   country: Country
   products: Product[]
   heroImageUrl?: string | null
   contentOverrides?: ContentOverrides | null
   socialLinks?: SocialLinks | null
+  categories?: StoreCategory[]
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -53,7 +60,7 @@ function Flag({ code, width, height }: { code: string; width: number; height: nu
   )
 }
 
-export default function CountryStorefront({ country, products, heroImageUrl, contentOverrides, socialLinks }: Props) {
+export default function CountryStorefront({ country, products, heroImageUrl, contentOverrides, socialLinks, categories = [] }: Props) {
   const router = useRouter()
   const { itemCount, openCart } = useCart()
   const cartCount = itemCount()
@@ -155,6 +162,14 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
     Object.entries(contentOverrides ?? {}).filter(([, v]) => v && (v as string).trim())
   )
   const c = { ...t, ...overrides }
+
+  // Build filter chips from database categories; fall back to hardcoded if none exist
+  const dynamicChips = categories.length > 0
+    ? [
+        { value: "all", label: isHe ? "הכל" : "All" },
+        ...categories.map((cat) => ({ value: cat.slug, label: cat.name })),
+      ]
+    : c.filterChips
 
   const [filter, setFilter] = useState<string>("all")
   const [customText, setCustomText] = useState(t.defaultText)
@@ -604,7 +619,7 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
 
             {/* Filter chips */}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {t.filterChips.map((chip) => {
+              {dynamicChips.map((chip) => {
                 const active = filter === chip.value
                 return (
                   <button
@@ -665,96 +680,104 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
                       transition: "all 0.18s ease",
                     }}
                   >
-                    <div
-                      style={{
-                        aspectRatio: "4/3.4",
-                        background: "#efece4",
-                        position: "relative",
-                        overflow: "hidden",
-                      }}
+                    <a
+                      href={`/products/${product.slug}`}
+                      style={{ display: "block", textDecoration: "none", color: "inherit" }}
                     >
-                      {firstImage ? (
-                        <Image
-                          src={firstImage.url}
-                          alt={firstImage.alt ?? product.title}
-                          fill
-                          style={{ objectFit: "cover" }}
-                          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                        />
-                      ) : (
+                      <div
+                        style={{
+                          aspectRatio: "4/3.4",
+                          background: "#efece4",
+                          position: "relative",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {firstImage ? (
+                          <Image
+                            src={firstImage.url}
+                            alt={firstImage.alt ?? product.title}
+                            fill
+                            style={{ objectFit: "cover" }}
+                            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              position: "absolute",
+                              inset: 0,
+                              background:
+                                "repeating-linear-gradient(135deg, rgba(17,19,22,.04) 0 2px, transparent 2px 16px)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontFamily: "var(--font-oswald), Arial, sans-serif",
+                                fontWeight: 600,
+                                fontSize: 13,
+                                letterSpacing: "0.22em",
+                                color: "rgba(17,19,22,0.25)",
+                                textTransform: "uppercase",
+                              }}
+                            >
+                              PRODUCT
+                            </span>
+                          </div>
+                        )}
+
                         <div
                           style={{
                             position: "absolute",
-                            inset: 0,
-                            background:
-                              "repeating-linear-gradient(135deg, rgba(17,19,22,.04) 0 2px, transparent 2px 16px)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
+                            top: 10,
+                            right: dir === "rtl" ? 10 : "auto",
+                            left: dir === "ltr" ? 10 : "auto",
+                            background: accentHex,
+                            color: "#fff",
+                            borderRadius: 9999,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            padding: "3px 10px",
+                            fontFamily: "var(--font-heebo), Arial, sans-serif",
                           }}
                         >
-                          <span
+                          {t.personalBadge}
+                        </div>
+                      </div>
+
+                      <div style={{ padding: "16px 16px 0" }}>
+                        {product.category && (
+                          <div
                             style={{
                               fontFamily: "var(--font-oswald), Arial, sans-serif",
-                              fontWeight: 600,
-                              fontSize: 13,
-                              letterSpacing: "0.22em",
-                              color: "rgba(17,19,22,0.25)",
+                              fontWeight: 500,
+                              fontSize: 11,
+                              letterSpacing: "0.2em",
+                              color: "rgba(17,19,22,0.45)",
                               textTransform: "uppercase",
+                              marginBottom: 5,
                             }}
                           >
-                            PRODUCT
-                          </span>
-                        </div>
-                      )}
-
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: 10,
-                          right: dir === "rtl" ? 10 : "auto",
-                          left: dir === "ltr" ? 10 : "auto",
-                          background: accentHex,
-                          color: "#fff",
-                          borderRadius: 9999,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          padding: "3px 10px",
-                          fontFamily: "var(--font-heebo), Arial, sans-serif",
-                        }}
-                      >
-                        {t.personalBadge}
-                      </div>
-                    </div>
-
-                    <div style={{ padding: 16 }}>
-                      {product.category && (
+                            {product.category.name}
+                          </div>
+                        )}
                         <div
                           style={{
-                            fontFamily: "var(--font-oswald), Arial, sans-serif",
-                            fontWeight: 500,
-                            fontSize: 11,
-                            letterSpacing: "0.2em",
-                            color: "rgba(17,19,22,0.45)",
-                            textTransform: "uppercase",
-                            marginBottom: 5,
+                            fontFamily: "var(--font-heebo), Arial, sans-serif",
+                            fontWeight: 800,
+                            fontSize: 18,
+                            color: "#14161a",
+                            marginBottom: 12,
+                            lineHeight: 1.2,
                           }}
                         >
-                          {product.category.name}
+                          {product.title}
                         </div>
-                      )}
-                      <div
-                        style={{
-                          fontFamily: "var(--font-heebo), Arial, sans-serif",
-                          fontWeight: 800,
-                          fontSize: 18,
-                          color: "#14161a",
-                          marginBottom: 12,
-                          lineHeight: 1.2,
-                        }}
-                      >
-                        {product.title}
                       </div>
+                    </a>
+
+                    <div style={{ padding: "0 16px 16px" }}>
                       <div
                         style={{
                           display: "flex",
