@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Trash2 } from "lucide-react"
+import { Pencil, Trash2 } from "lucide-react"
+import Link from "next/link"
 
 interface Props {
   id: string
@@ -34,6 +35,12 @@ export default function CouponActions({ id, isActive }: Props) {
 
   return (
     <div className="flex items-center gap-2">
+      <Link
+        href={`/admin/coupons/${id}`}
+        className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <Pencil className="w-4 h-4" />
+      </Link>
       <button
         onClick={toggle}
         disabled={loading}

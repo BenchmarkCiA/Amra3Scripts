@@ -13,13 +13,29 @@ interface Category {
   name: string
 }
 
+interface Coupon {
+  id: string
+  code: string
+  type: "percentage" | "fixed"
+  value: number
+  min_order_amount: number | null
+  max_uses: number | null
+  valid_from: string
+  valid_until: string
+  is_active: boolean
+  product_ids: string[] | null
+  category_ids: string[] | null
+}
+
 interface Props {
   products: Product[]
   categories: Category[]
+  coupon?: Coupon
 }
 
-export default function CouponForm({ products, categories }: Props) {
+export default function CouponForm({ products, categories, coupon }: Props) {
   const router = useRouter()
+  const isEdit = !!coupon?.id
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
 
@@ -27,17 +43,17 @@ export default function CouponForm({ products, categories }: Props) {
   const nextMonth = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
 
   const [form, setForm] = useState({
-    code: "",
-    type: "percentage" as "percentage" | "fixed",
-    value: "",
-    min_order_amount: "",
-    max_uses: "",
-    valid_from: today,
-    valid_until: nextMonth,
-    is_active: true,
+    code: coupon?.code ?? "",
+    type: (coupon?.type ?? "percentage") as "percentage" | "fixed",
+    value: coupon?.value != null ? String(coupon.value) : "",
+    min_order_amount: coupon?.min_order_amount != null ? String(coupon.min_order_amount) : "",
+    max_uses: coupon?.max_uses != null ? String(coupon.max_uses) : "",
+    valid_from: coupon?.valid_from ? coupon.valid_from.slice(0, 10) : today,
+    valid_until: coupon?.valid_until ? coupon.valid_until.slice(0, 10) : nextMonth,
+    is_active: coupon?.is_active ?? true,
   })
-  const [selectedProducts, setSelectedProducts] = useState<string[]>([])
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [selectedProducts, setSelectedProducts] = useState<string[]>(coupon?.product_ids ?? [])
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(coupon?.category_ids ?? [])
 
   const toggleProduct = (id: string) =>
     setSelectedProducts((prev) =>
@@ -54,8 +70,10 @@ export default function CouponForm({ products, categories }: Props) {
     setSaving(true)
     setError("")
     try {
-      const res = await fetch("/api/admin/coupons", {
-        method: "POST",
+      const url = isEdit ? `/api/admin/coupons/${coupon!.id}` : "/api/admin/coupons"
+      const method = isEdit ? "PATCH" : "POST"
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
@@ -67,8 +85,9 @@ export default function CouponForm({ products, categories }: Props) {
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? "Failed to create coupon")
+      if (!res.ok) throw new Error(data.error ?? "Failed")
       router.push("/admin/coupons")
+      router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error")
       setSaving(false)
@@ -227,7 +246,7 @@ export default function CouponForm({ products, categories }: Props) {
           disabled={saving}
           className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
-          {saving ? "Creating..." : "Create Coupon"}
+          {saving ? "Saving..." : isEdit ? "Save Changes" : "Create Coupon"}
         </button>
         <button
           type="button"
