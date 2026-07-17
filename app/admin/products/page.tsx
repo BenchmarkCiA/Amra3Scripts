@@ -119,7 +119,7 @@ export default async function AdminProductsPage({ searchParams }: Props) {
                     </span>
                   </td>
                   <td className="px-4 py-4 text-muted-foreground">
-                    {(p.category as { name: string } | null)?.name ?? "—"}
+                    {(p.category as unknown as { name: string } | null)?.name ?? "—"}
                   </td>
                   <td className="px-4 py-4">
                     {countryCodes?.length ? (
