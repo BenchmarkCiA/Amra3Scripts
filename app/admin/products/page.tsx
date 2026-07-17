@@ -89,7 +89,10 @@ export default async function AdminProductsPage({ searchParams }: Props) {
             {products?.map((p) => {
               const prices = (p.variants as { price: number }[])?.map((v) => v.price) ?? []
               const minPrice = prices.length ? Math.min(...prices) : null
-              const thumbnail = (p.images as string[] | null)?.[0] ?? null
+              const firstImage = (p.images as { url?: string; src?: string }[] | string[] | null)?.[0]
+              const thumbnail = typeof firstImage === "string"
+                ? firstImage
+                : (firstImage?.url ?? firstImage?.src ?? null)
               const countryCodes = p.country_codes as string[] | null
               return (
                 <tr key={p.id} className="hover:bg-muted/30 transition-colors">
