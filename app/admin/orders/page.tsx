@@ -8,7 +8,7 @@ export default async function AdminOrdersPage() {
   const supabase = createAdminClient()
   const { data: orders } = await supabase
     .from("orders")
-    .select("*")
+    .select("id, order_number, customer_email, status, fulfillment_status, customer_status, total, created_at")
     .order("created_at", { ascending: false })
 
   return (
@@ -22,7 +22,7 @@ export default async function AdminOrdersPage() {
               <th className="text-left px-6 py-3 font-medium text-muted-foreground">Order #</th>
               <th className="text-left px-6 py-3 font-medium text-muted-foreground">Customer</th>
               <th className="text-left px-6 py-3 font-medium text-muted-foreground">Status</th>
-              <th className="text-left px-6 py-3 font-medium text-muted-foreground">Fulfillment</th>
+              <th className="text-left px-6 py-3 font-medium text-muted-foreground">Customer Status</th>
               <th className="text-right px-6 py-3 font-medium text-muted-foreground">Total</th>
               <th className="text-right px-6 py-3 font-medium text-muted-foreground">Date</th>
               <th className="px-6 py-3" />
@@ -44,13 +44,20 @@ export default async function AdminOrdersPage() {
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    order.fulfillment_status === "fulfilled" ? "bg-success/10 text-success" :
-                    order.fulfillment_status === "partial" ? "bg-warning/10 text-warning" :
-                    "bg-muted text-muted-foreground"
-                  }`}>
-                    {order.fulfillment_status}
-                  </span>
+                  {order.customer_status ? (
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      order.customer_status === "picked_up" ? "bg-success/10 text-success" :
+                      order.customer_status === "in_delivery" ? "bg-accent/10 text-accent" :
+                      order.customer_status === "waiting_for_pickup" ? "bg-blue-100 text-blue-700" :
+                      "bg-warning/10 text-warning"
+                    }`}>
+                      {order.customer_status.replace(/_/g, " ")}
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                      processing
+                    </span>
+                  )}
                 </td>
                 <td className="px-6 py-4 text-right font-medium">
                   {formatPrice(order.total, "USD")}

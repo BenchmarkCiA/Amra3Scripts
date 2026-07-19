@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 
 function LoginForm() {
@@ -35,8 +36,8 @@ function LoginForm() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted px-4">
       <div className="bg-white rounded-2xl border border-border shadow-sm w-full max-w-sm p-8">
-        <h1 className="text-xl font-bold mb-1">Admin Sign In</h1>
-        <p className="text-sm text-muted-foreground mb-6">Sign in to manage your store.</p>
+        <h1 className="text-xl font-bold mb-1">Sign In</h1>
+        <p className="text-sm text-muted-foreground mb-6">Sign in to your account.</p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
@@ -76,9 +77,18 @@ function LoginForm() {
             disabled={loading}
             className="bg-primary text-primary-foreground py-2.5 rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? "Signing in…" : "Sign In"}
           </button>
         </form>
+
+        {next !== "/admin" && (
+          <p className="text-sm text-center text-muted-foreground mt-6">
+            Don&apos;t have an account?{" "}
+            <Link href={`/auth/register?next=${next}`} className="text-accent hover:underline font-medium">
+              Create one
+            </Link>
+          </p>
+        )}
       </div>
     </div>
   )

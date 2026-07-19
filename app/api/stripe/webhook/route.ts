@@ -62,11 +62,21 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   const total = (session.amount_total ?? 0) / 100
   const orderNumber = `ORD-${await nextOrderNumber(supabase)}`
 
+  const customerEmail = session.customer_details?.email ?? ""
+
+  // Link to customer account if they have one
+  const { data: customer } = await supabase
+    .from("customers")
+    .select("id")
+    .eq("email", customerEmail)
+    .single()
+
   const { data: order, error } = await supabase
     .from("orders")
     .insert({
       order_number: orderNumber,
-      customer_email: session.customer_details?.email ?? "",
+      customer_email: customerEmail,
+      customer_id: customer?.id ?? null,
       status: "paid",
       stripe_payment_intent_id: session.payment_intent as string,
       subtotal,
