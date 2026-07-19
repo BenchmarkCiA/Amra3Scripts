@@ -13,6 +13,7 @@ import {
   Settings,
   Tag,
   FolderOpen,
+  MessageCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -25,6 +26,7 @@ const nav = [
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/country-settings", label: "Storefronts", icon: Globe },
   { href: "/admin/coupons", label: "Coupons", icon: Tag },
+  { href: "/admin/chat", label: "Chat Widget", icon: MessageCircle },
   { href: "/admin/site-settings", label: "Site Settings", icon: Settings },
 ]
 

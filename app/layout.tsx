@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Heebo, Oswald } from "next/font/google";
 import "./globals.css";
+import ChatWidget from "@/components/chat/ChatWidget";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -34,7 +35,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="he" className={`${inter.variable} ${heebo.variable} ${oswald.variable} h-full`}>
-      <body className={`min-h-full flex flex-col antialiased ${heebo.variable} ${oswald.variable}`}>{children}</body>
+      <body className={`min-h-full flex flex-col antialiased ${heebo.variable} ${oswald.variable}`}>
+        {children}
+        <ChatWidget />
+      </body>
     </html>
   );
 }
