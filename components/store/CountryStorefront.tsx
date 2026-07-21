@@ -17,6 +17,17 @@ interface ContentOverrides {
   heroCta1?: string
   heroCta2?: string
   collectionTitle?: string
+  stat1Label?: string
+  stat1Sub?: string
+  stat2Label?: string
+  stat2Sub?: string
+  stat3Label?: string
+  stat3Sub?: string
+  customizerH2a?: string
+  customizerH2b?: string
+  customizerLead?: string
+  customizerLabel?: string
+  footerBadge?: string
 }
 
 interface StoreCategory {
@@ -162,6 +173,13 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
     Object.entries(contentOverrides ?? {}).filter(([, v]) => v && (v as string).trim())
   )
   const c = { ...t, ...overrides }
+
+  // Build overridable stats from flat override fields or fall back to defaults
+  const cStats = [
+    { label: (c as ContentOverrides).stat1Label || t.stats[0].label, sub: (c as ContentOverrides).stat1Sub || t.stats[0].sub },
+    { label: (c as ContentOverrides).stat2Label || t.stats[1].label, sub: (c as ContentOverrides).stat2Sub || t.stats[1].sub },
+    { label: (c as ContentOverrides).stat3Label || t.stats[2].label, sub: (c as ContentOverrides).stat3Sub || t.stats[2].sub },
+  ]
 
   // Build filter chips from database categories; fall back to hardcoded if none exist
   const dynamicChips = categories.length > 0
@@ -487,7 +505,7 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
               marginTop: 4,
             }}
           >
-            {t.stats.map((stat) => (
+            {cStats.map((stat) => (
               <div key={stat.label}>
                 <div
                   style={{
@@ -648,7 +666,7 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
           {/* Product grid */}
           {filteredProducts.length === 0 ? (
             <p style={{ textAlign: "center", color: "rgba(17,19,22,0.45)", padding: "40px 0" }}>
-              {t.noProducts}
+              {c.noProducts}
             </p>
           ) : (
             <div
@@ -742,7 +760,7 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
                             fontFamily: "var(--font-heebo), Arial, sans-serif",
                           }}
                         >
-                          {t.personalBadge}
+                          {c.personalBadge}
                         </div>
                       </div>
 
@@ -811,7 +829,7 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
                             whiteSpace: "nowrap",
                           }}
                         >
-                          {t.addToCart}
+                          {c.addToCart}
                         </a>
                       </div>
                     </div>
@@ -863,7 +881,7 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
                 textAlign: isHe ? "right" : "left",
               }}
             >
-              {t.customizerEyebrow}
+              {c.customizerEyebrow}
             </div>
             <h2
               style={{
@@ -875,8 +893,8 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
                 textAlign: isHe ? "right" : "left",
               }}
             >
-              {t.customizerH2a}{" "}
-              <span style={{ display: "block" }}>{t.customizerH2b}</span>
+              {c.customizerH2a}{" "}
+              <span style={{ display: "block" }}>{c.customizerH2b}</span>
             </h2>
             <p
               style={{
@@ -887,7 +905,7 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
                 fontSize: "clamp(14px,1.2vw,17px)",
               }}
             >
-              {t.customizerLead}
+              {c.customizerLead}
             </p>
 
             <div>
@@ -901,7 +919,7 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
                   textAlign: isHe ? "right" : "left",
                 }}
               >
-                {t.customizerLabel}
+                {c.customizerLabel}
               </label>
               <input
                 type="text"
@@ -1137,7 +1155,7 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
                 fontFamily: "var(--font-heebo), Arial, sans-serif",
               }}
             >
-              {t.footerBadge}
+              {c.footerBadge}
             </div>
           </div>
 

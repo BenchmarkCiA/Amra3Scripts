@@ -11,6 +11,17 @@ interface ContentOverrides {
   heroCta1?: string
   heroCta2?: string
   collectionTitle?: string
+  stat1Label?: string
+  stat1Sub?: string
+  stat2Label?: string
+  stat2Sub?: string
+  stat3Label?: string
+  stat3Sub?: string
+  customizerH2a?: string
+  customizerH2b?: string
+  customizerLead?: string
+  customizerLabel?: string
+  footerBadge?: string
 }
 
 interface SeoOverrides {
@@ -22,7 +33,16 @@ interface Props {
   country: Country
   initialContent: ContentOverrides
   initialSeo: SeoOverrides
-  defaults: ContentOverrides & { defaultMetaTitle: string; defaultMetaDescription: string }
+  defaults: ContentOverrides & {
+    defaultMetaTitle: string
+    defaultMetaDescription: string
+    stat1Label: string; stat1Sub: string
+    stat2Label: string; stat2Sub: string
+    stat3Label: string; stat3Sub: string
+    customizerH2a: string; customizerH2b: string
+    customizerLead: string; customizerLabel: string
+    footerBadge: string
+  }
 }
 
 function Field({
@@ -185,6 +205,102 @@ export default function CountryContentForm({ country, initialContent, initialSeo
             maxLength={80}
           />
         </div>
+      </div>
+
+      {/* Stats */}
+      <div className="bg-white rounded-xl border border-border p-6">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+          Stats Bar
+        </h2>
+        <p className="text-xs text-muted-foreground mb-5">
+          The three numbers shown below the hero image.
+        </p>
+        <div className="space-y-4">
+          {([
+            { labelKey: "stat1Label" as const, subKey: "stat1Sub" as const, num: 1, defaultLabel: defaults.stat1Label, defaultSub: defaults.stat1Sub },
+            { labelKey: "stat2Label" as const, subKey: "stat2Sub" as const, num: 2, defaultLabel: defaults.stat2Label, defaultSub: defaults.stat2Sub },
+            { labelKey: "stat3Label" as const, subKey: "stat3Sub" as const, num: 3, defaultLabel: defaults.stat3Label, defaultSub: defaults.stat3Sub },
+          ]).map(({ labelKey, subKey, num, defaultLabel, defaultSub }) => (
+            <div key={num} className="grid grid-cols-2 gap-4 pb-4 border-b border-border last:border-0 last:pb-0">
+              <Field
+                label={`Stat ${num} — number / value`}
+                value={content[labelKey] ?? ""}
+                placeholder={defaultLabel}
+                onChange={(v) => setC(labelKey, v)}
+                maxLength={20}
+              />
+              <Field
+                label={`Stat ${num} — label`}
+                value={content[subKey] ?? ""}
+                placeholder={defaultSub}
+                onChange={(v) => setC(subKey, v)}
+                maxLength={40}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Customizer section */}
+      <div className="bg-white rounded-xl border border-border p-6">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+          "Make It Yours" Section
+        </h2>
+        <p className="text-xs text-muted-foreground mb-5">
+          The personalisation section below the product grid.
+        </p>
+        <div className="space-y-5">
+          <div className="grid grid-cols-2 gap-4">
+            <Field
+              label="Heading — line 1"
+              value={content.customizerH2a ?? ""}
+              placeholder={defaults.customizerH2a}
+              onChange={(v) => setC("customizerH2a", v)}
+              maxLength={50}
+            />
+            <Field
+              label="Heading — line 2"
+              value={content.customizerH2b ?? ""}
+              placeholder={defaults.customizerH2b}
+              onChange={(v) => setC("customizerH2b", v)}
+              maxLength={50}
+            />
+          </div>
+          <Field
+            label="Description"
+            value={content.customizerLead ?? ""}
+            placeholder={defaults.customizerLead}
+            onChange={(v) => setC("customizerLead", v)}
+            maxLength={300}
+            multiline
+          />
+          <Field
+            label="Input field label"
+            hint="The label above the text input box"
+            value={content.customizerLabel ?? ""}
+            placeholder={defaults.customizerLabel}
+            onChange={(v) => setC("customizerLabel", v)}
+            maxLength={40}
+          />
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="bg-white rounded-xl border border-border p-6">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+          Footer
+        </h2>
+        <p className="text-xs text-muted-foreground mb-5">
+          Text displayed in the dark footer at the bottom of the page.
+        </p>
+        <Field
+          label="Brand badge / tagline"
+          hint="Small pill shown under the logo in the footer"
+          value={content.footerBadge ?? ""}
+          placeholder={defaults.footerBadge}
+          onChange={(v) => setC("footerBadge", v)}
+          maxLength={60}
+        />
       </div>
 
       {/* SEO */}
