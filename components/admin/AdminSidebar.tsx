@@ -14,6 +14,7 @@ import {
   Tag,
   FolderOpen,
   MessageCircle,
+  Layers,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -27,6 +28,7 @@ const nav = [
   { href: "/admin/country-settings", label: "Storefronts", icon: Globe },
   { href: "/admin/coupons", label: "Coupons", icon: Tag },
   { href: "/admin/chat", label: "Chat Widget", icon: MessageCircle },
+  { href: "/admin/popup", label: "Popup", icon: Layers },
   { href: "/admin/site-settings", label: "Site Settings", icon: Settings },
 ]
 
