@@ -370,6 +370,7 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
           </button>
 
           <button
+            onClick={() => router.push("/account")}
             style={{
               width: 40,
               height: 40,
