@@ -61,7 +61,7 @@ export default function CountryImageCard({ country, currentUrl }: Props) {
     <div className="bg-white rounded-xl border border-border overflow-hidden">
       <div
         className="relative bg-muted/30 flex items-center justify-center cursor-pointer group"
-        style={{ aspectRatio: "800 / 900" }}
+        style={{ aspectRatio: "3 / 2" }}
         onClick={() => !uploading && fileRef.current?.click()}
       >
         {url ? (
@@ -81,7 +81,7 @@ export default function CountryImageCard({ country, currentUrl }: Props) {
           <div className="flex flex-col items-center gap-2 text-muted-foreground p-6 text-center">
             <Upload className="w-8 h-8" />
             <span className="text-sm font-medium">Click to upload</span>
-            <span className="text-xs">JPG, WebP · 800×900 px · max 500 KB</span>
+            <span className="text-xs">JPG, WebP · 1200×800 px (3:2) · max 2 MB</span>
           </div>
         )}
         {uploading && (
