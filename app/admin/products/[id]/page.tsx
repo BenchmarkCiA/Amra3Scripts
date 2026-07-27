@@ -52,6 +52,7 @@ export default async function EditProductPage({ params }: Props) {
           seo_title: product.seo_title,
           seo_description: product.seo_description,
           country_codes: product.country_codes ?? null,
+          allow_personalization: product.allow_personalization ?? false,
           variants: (product.variants ?? []).map((v: {
             title: string
             sku: string | null

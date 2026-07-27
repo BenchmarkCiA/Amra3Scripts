@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { title, description, category_id, tags, status, is_featured, images, seo_title, seo_description, variants } = body
+    const { title, description, category_id, tags, status, is_featured, images, seo_title, seo_description, variants, allow_personalization } = body
 
     if (!title || !variants?.length) {
       return NextResponse.json({ error: "Title and at least one variant are required" }, { status: 400 })
@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
         images: images || [],
         seo_title,
         seo_description,
+        allow_personalization: allow_personalization === true,
       })
       .select()
       .single()

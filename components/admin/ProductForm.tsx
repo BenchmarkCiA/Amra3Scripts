@@ -37,6 +37,7 @@ interface InitialProduct {
   seo_title: string | null
   seo_description: string | null
   country_codes: string[] | null
+  allow_personalization: boolean
   variants: {
     title: string
     sku: string | null
@@ -75,6 +76,7 @@ export default function ProductForm({ categories, product }: Props) {
     (product?.status === "active" ? "active" : "draft")
   )
   const [isFeatured, setIsFeatured] = useState(product?.is_featured ?? false)
+  const [allowPersonalization, setAllowPersonalization] = useState(product?.allow_personalization ?? false)
   const [tags, setTags] = useState(product?.tags?.join(", ") ?? "")
   const [seoTitle, setSeoTitle] = useState(product?.seo_title ?? "")
   const [seoDescription, setSeoDescription] = useState(product?.seo_description ?? "")
@@ -140,6 +142,7 @@ export default function ProductForm({ categories, product }: Props) {
     seo_title: seoTitle.trim() || null,
     seo_description: seoDescription.trim() || null,
     country_codes: selectedRegions.length ? selectedRegions : null,
+    allow_personalization: allowPersonalization,
     variants: variants
       .filter(v => v.title && v.price)
       .map(v => ({
@@ -273,6 +276,19 @@ export default function ProductForm({ categories, product }: Props) {
             className="w-4 h-4 rounded accent-accent"
           />
           <span className="text-sm font-medium">Feature on homepage</span>
+        </label>
+
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={allowPersonalization}
+            onChange={e => setAllowPersonalization(e.target.checked)}
+            className="w-4 h-4 rounded accent-accent"
+          />
+          <span className="text-sm font-medium">
+            Allow personal text
+            <span className="font-normal text-muted-foreground"> — shows &ldquo;Personal text (printed on item)&rdquo; field on the product page</span>
+          </span>
         </label>
       </section>
 

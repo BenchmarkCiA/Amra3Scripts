@@ -35,6 +35,7 @@ export interface Product {
   is_featured: boolean
   seo_title?: string
   seo_description?: string
+  allow_personalization: boolean
   created_at: string
   updated_at: string
   category?: Category
