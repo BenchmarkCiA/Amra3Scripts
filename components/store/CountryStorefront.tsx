@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { type Country, formatCountryPrice } from "@/lib/countries"
+import { type Country, formatCountryPrice, COUNTRIES } from "@/lib/countries"
 import type { Product } from "@/types"
 import SocialIcons, { type SocialLinks } from "@/components/store/SocialIcons"
 import CartDrawer from "@/components/store/CartDrawer"
@@ -192,10 +192,24 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
   const [filter, setFilter] = useState<string>("all")
   const [customText, setCustomText] = useState(t.defaultText)
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const pickerRef = useRef<HTMLDivElement>(null)
 
-  function switchCountry() {
-    localStorage.removeItem("otzma_country")
-    router.push("/")
+  useEffect(() => {
+    if (!pickerOpen) return
+    function handleClick(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPickerOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [pickerOpen])
+
+  function goToCountry(code: string) {
+    localStorage.setItem("otzma_country", code)
+    setPickerOpen(false)
+    router.push(`/${code}`)
   }
 
   const filteredProducts =
@@ -304,26 +318,75 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
 
         {/* Right cluster */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button
-            onClick={switchCountry}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 7,
-              border: "1px solid rgba(17,19,22,0.2)",
-              borderRadius: 9999,
-              padding: "6px 13px",
-              background: "transparent",
-              cursor: "pointer",
-              fontSize: 13,
-              color: "#14161a",
-              fontFamily: "var(--font-heebo), Arial, sans-serif",
-            }}
-          >
-            <Flag code={country.code} width={22} height={15} />
-            <span>{displayName}</span>
-            <span style={{ color: "rgba(17,19,22,0.45)" }}>{t.switchSuffix}</span>
-          </button>
+          {/* Country picker */}
+          <div ref={pickerRef} style={{ position: "relative" }}>
+            <button
+              onClick={() => setPickerOpen((o) => !o)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
+                border: "1px solid rgba(17,19,22,0.2)",
+                borderRadius: 9999,
+                padding: "6px 13px",
+                background: pickerOpen ? "rgba(17,19,22,0.06)" : "transparent",
+                cursor: "pointer",
+                fontSize: 13,
+                color: "#14161a",
+                fontFamily: "var(--font-heebo), Arial, sans-serif",
+              }}
+            >
+              <Flag code={country.code} width={22} height={15} />
+              <span>{displayName}</span>
+              <span style={{ color: "rgba(17,19,22,0.45)" }}>{t.switchSuffix}</span>
+            </button>
+
+            {pickerOpen && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 8px)",
+                  [isHe ? "left" : "right"]: 0,
+                  background: "#fff",
+                  border: "1px solid rgba(17,19,22,0.12)",
+                  borderRadius: 10,
+                  boxShadow: "0 8px 32px rgba(17,19,22,0.14)",
+                  minWidth: 200,
+                  zIndex: 100,
+                  overflow: "hidden",
+                  padding: "6px 0",
+                }}
+              >
+                {Object.values(COUNTRIES).map((c) => (
+                  <button
+                    key={c.code}
+                    onClick={() => goToCountry(c.code)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      width: "100%",
+                      padding: "10px 16px",
+                      background: c.code === country.code ? "rgba(17,19,22,0.05)" : "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: 14,
+                      color: "#14161a",
+                      fontFamily: "var(--font-heebo), Arial, sans-serif",
+                      textAlign: isHe ? "right" : "left",
+                      fontWeight: c.code === country.code ? 600 : 400,
+                    }}
+                  >
+                    <Flag code={c.code} width={24} height={16} />
+                    <span>{c.nameEn}</span>
+                    {c.code === country.code && (
+                      <span style={{ marginInlineStart: "auto", fontSize: 11, color: "rgba(17,19,22,0.4)" }}>✓</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Cart icon */}
           <button
@@ -1170,7 +1233,7 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
                 {t.footerViewing}
               </span>
               <button
-                onClick={switchCountry}
+                onClick={() => { window.scrollTo({ top: 0, behavior: "smooth" }); setTimeout(() => setPickerOpen(true), 400) }}
                 style={{
                   background: "transparent",
                   border: "none",
