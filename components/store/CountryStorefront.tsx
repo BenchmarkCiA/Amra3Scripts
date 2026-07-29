@@ -539,6 +539,7 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
             >
               {c.heroCta1}
             </a>
+            {/* heroCta2 "Design yours" — hidden for now, re-enable when ready
             <a
               href="#customizer"
               style={{
@@ -556,6 +557,7 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
             >
               {c.heroCta2}
             </a>
+            */}
           </div>
 
           {/* Stats */}
