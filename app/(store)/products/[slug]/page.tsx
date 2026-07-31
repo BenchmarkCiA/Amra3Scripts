@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import ProductGallery from "@/components/store/ProductGallery"
 import ProductVariants from "@/components/store/ProductVariants"
+import { ReviewSummary } from "@/components/store/ProductReviews"
+import ProductReviews from "@/components/store/ProductReviews"
 import type { Metadata } from "next"
 
 interface Props {
@@ -33,6 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params
   const supabase = await createClient()
+  const adminSupabase = createAdminClient()
 
   const { data: product } = await supabase
     .from("products")
@@ -42,6 +46,12 @@ export default async function ProductPage({ params }: Props) {
     .single()
 
   if (!product) notFound()
+
+  const { data: productReviews } = await adminSupabase
+    .from("product_reviews")
+    .select("*")
+    .eq("product_id", product.id)
+    .order("created_at", { ascending: false })
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
@@ -58,6 +68,8 @@ export default async function ProductPage({ params }: Props) {
             </a>
           )}
 
+          <ReviewSummary productId={product.id} initialReviews={productReviews ?? []} />
+
           <h1 className="text-3xl font-bold">{product.title}</h1>
 
           {product.description && (
@@ -69,6 +81,8 @@ export default async function ProductPage({ params }: Props) {
           <ProductVariants product={product} />
         </div>
       </div>
+
+      <ProductReviews productId={product.id} initialReviews={productReviews ?? []} />
     </div>
   )
 }

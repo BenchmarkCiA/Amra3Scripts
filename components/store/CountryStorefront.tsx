@@ -234,7 +234,7 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
         ["--accent-glow" as string]: glowColor,
       }}
     >
-      {/* ── Announcement bar ── */}
+      {/* ── Announcement bar — hidden for now, re-enable when needed
       <div
         style={{
           background: accentHex,
@@ -247,6 +247,7 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
       >
         {c.announcement}
       </div>
+      */}
 
       {/* ── Sticky header ── */}
       <header

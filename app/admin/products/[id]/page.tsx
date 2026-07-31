@@ -5,6 +5,7 @@ import Link from "next/link"
 import { ChevronLeft } from "lucide-react"
 import { createAdminClient } from "@/lib/supabase/admin"
 import ProductForm from "@/components/admin/ProductForm"
+import ProductReviewsPanel from "@/components/admin/ProductReviewsPanel"
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -12,7 +13,7 @@ export default async function EditProductPage({ params }: Props) {
   const { id } = await params
   const supabase = createAdminClient()
 
-  const [{ data: product }, { data: categories }] = await Promise.all([
+  const [{ data: product }, { data: categories }, { data: reviews }] = await Promise.all([
     supabase
       .from("products")
       .select("*, variants:product_variants(*), country_codes")
@@ -23,13 +24,18 @@ export default async function EditProductPage({ params }: Props) {
       .select("id, name")
       .eq("is_active", true)
       .order("name"),
+    supabase
+      .from("product_reviews")
+      .select("*")
+      .eq("product_id", id)
+      .order("created_at", { ascending: false }),
   ])
 
   if (!product) notFound()
 
   return (
-    <div className="max-w-3xl">
-      <div className="flex items-center gap-3 mb-8">
+    <div className="max-w-3xl flex flex-col gap-8">
+      <div className="flex items-center gap-3">
         <Link
           href="/admin/products"
           className="text-muted-foreground hover:text-foreground transition-colors"
@@ -70,6 +76,7 @@ export default async function EditProductPage({ params }: Props) {
           })),
         }}
       />
+      <ProductReviewsPanel productId={product.id} initialReviews={reviews ?? []} />
     </div>
   )
 }
