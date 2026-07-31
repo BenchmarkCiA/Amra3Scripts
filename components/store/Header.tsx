@@ -2,8 +2,7 @@
 
 import Link from "next/link"
 import { ShoppingBag, Menu, X } from "lucide-react"
-import { useState } from "react"
-import { usePathname } from "next/navigation"
+import { useState, useEffect } from "react"
 import { useCart } from "@/hooks/useCart"
 import CartDrawer from "./CartDrawer"
 
@@ -11,8 +10,13 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { itemCount, openCart } = useCart()
   const count = itemCount()
-  const pathname = usePathname()
-  const country = pathname?.split("/")[1] ?? "il"
+  const [country, setCountry] = useState("il")
+
+  useEffect(() => {
+    const saved = localStorage.getItem("otzma_country")
+    if (saved) setCountry(saved)
+  }, [])
+
   const base = `/${country}`
 
   return (
