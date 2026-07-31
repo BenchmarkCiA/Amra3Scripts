@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Trash2, Upload, X } from "lucide-react"
+import { Plus, Star, Trash2, Upload, X } from "lucide-react"
 import Image from "next/image"
 
 interface Category { id: string; name: string }
@@ -84,6 +84,8 @@ export default function ProductForm({ categories, product }: Props) {
   const [images, setImages] = useState<{ url: string; alt: string }[]>(product?.images ?? [])
   const [selectedRegions, setSelectedRegions] = useState<string[]>(product?.country_codes ?? [])
   const [uploading, setUploading] = useState(false)
+  const dragIndex = useRef<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
   const [variants, setVariants] = useState<Variant[]>(
     product?.variants?.length
@@ -117,6 +119,36 @@ export default function ProductForm({ categories, product }: Props) {
 
   const removeImage = (i: number) =>
     setImages((prev) => prev.filter((_, idx) => idx !== i))
+
+  const setPrimaryImage = (i: number) =>
+    setImages((prev) => [prev[i], ...prev.filter((_, idx) => idx !== i)])
+
+  function onDragStart(i: number) {
+    dragIndex.current = i
+  }
+
+  function onDragOver(e: React.DragEvent, i: number) {
+    e.preventDefault()
+    setDragOverIndex(i)
+  }
+
+  function onDrop(i: number) {
+    const from = dragIndex.current
+    if (from === null || from === i) { setDragOverIndex(null); return }
+    setImages((prev) => {
+      const next = [...prev]
+      const [item] = next.splice(from, 1)
+      next.splice(i, 0, item)
+      return next
+    })
+    dragIndex.current = null
+    setDragOverIndex(null)
+  }
+
+  function onDragEnd() {
+    dragIndex.current = null
+    setDragOverIndex(null)
+  }
 
   const updateVariant = (i: number, field: keyof Variant, value: string) =>
     setVariants((prev) => prev.map((v, idx) => idx === i ? { ...v, [field]: value } : v))
@@ -298,8 +330,43 @@ export default function ProductForm({ categories, product }: Props) {
 
         <div className="flex flex-wrap gap-3">
           {images.map((img, i) => (
-            <div key={i} className="relative w-24 h-24 rounded-lg overflow-hidden border border-border group">
+            <div
+              key={img.url}
+              draggable
+              onDragStart={() => onDragStart(i)}
+              onDragOver={(e) => onDragOver(e, i)}
+              onDrop={() => onDrop(i)}
+              onDragEnd={onDragEnd}
+              className={`relative w-24 h-24 rounded-lg overflow-hidden border-2 group cursor-grab active:cursor-grabbing transition-all ${
+                dragOverIndex === i
+                  ? "border-accent scale-105"
+                  : i === 0
+                  ? "border-accent"
+                  : "border-border"
+              }`}
+            >
               <Image src={img.url} alt={img.alt} fill className="object-cover" sizes="96px" />
+
+              {/* Primary badge */}
+              {i === 0 && (
+                <span className="absolute bottom-0 left-0 right-0 bg-accent/90 text-white text-[10px] font-semibold text-center py-0.5 leading-tight">
+                  PRIMARY
+                </span>
+              )}
+
+              {/* Set as primary button */}
+              {i !== 0 && (
+                <button
+                  type="button"
+                  onClick={() => setPrimaryImage(i)}
+                  title="Set as primary image"
+                  className="absolute bottom-1 left-1 bg-black/60 text-yellow-400 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Star className="w-3 h-3" />
+                </button>
+              )}
+
+              {/* Remove button */}
               <button
                 type="button"
                 onClick={() => removeImage(i)}
@@ -317,7 +384,7 @@ export default function ProductForm({ categories, product }: Props) {
           </label>
         </div>
 
-        <p className="text-xs text-muted-foreground">First image will be used as the product thumbnail. Drag to reorder (coming soon).</p>
+        <p className="text-xs text-muted-foreground">First image (highlighted) is the product thumbnail. Drag to reorder or click ★ to set as primary.</p>
       </section>
 
       {/* Variants */}
