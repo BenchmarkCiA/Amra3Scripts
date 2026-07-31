@@ -196,6 +196,10 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
   const pickerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    localStorage.setItem("otzma_country", country.code)
+  }, [country.code])
+
+  useEffect(() => {
     if (!pickerOpen) return
     function handleClick(e: MouseEvent) {
       if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
@@ -772,7 +776,7 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
                       <div
                         style={{
                           aspectRatio: "4/3.4",
-                          background: "#efece4",
+                          background: "#ffffff",
                           position: "relative",
                           overflow: "hidden",
                         }}
@@ -782,7 +786,7 @@ export default function CountryStorefront({ country, products, heroImageUrl, con
                             src={firstImage.url}
                             alt={firstImage.alt ?? product.title}
                             fill
-                            style={{ objectFit: "cover" }}
+                            style={{ objectFit: "contain", padding: "8px" }}
                             sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
                           />
                         ) : (
