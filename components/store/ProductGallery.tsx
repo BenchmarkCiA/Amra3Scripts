@@ -23,12 +23,12 @@ export default function ProductGallery({ images, title }: Props) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative aspect-square rounded-xl overflow-hidden bg-muted">
+      <div className="relative aspect-square rounded-xl overflow-hidden bg-white border border-border">
         <Image
           src={sorted[selected].url}
           alt={sorted[selected].alt || title}
           fill
-          className="object-cover"
+          className="object-contain p-4"
           sizes="(max-width: 768px) 100vw, 50vw"
           priority
         />
@@ -39,7 +39,7 @@ export default function ProductGallery({ images, title }: Props) {
             <button
               key={i}
               onClick={() => setSelected(i)}
-              className={`relative shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
+              className={`relative shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 bg-white transition-colors ${
                 i === selected ? "border-accent" : "border-transparent"
               }`}
             >
@@ -47,7 +47,7 @@ export default function ProductGallery({ images, title }: Props) {
                 src={img.url}
                 alt={img.alt || `${title} ${i + 1}`}
                 fill
-                className="object-cover"
+                className="object-contain p-1"
                 sizes="64px"
               />
             </button>
