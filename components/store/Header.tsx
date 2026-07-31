@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { ShoppingBag, Menu, X } from "lucide-react"
 import { useState } from "react"
+import { usePathname } from "next/navigation"
 import { useCart } from "@/hooks/useCart"
 import CartDrawer from "./CartDrawer"
 
@@ -10,17 +11,20 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { itemCount, openCart } = useCart()
   const count = itemCount()
+  const pathname = usePathname()
+  const country = pathname?.split("/")[1] ?? "il"
+  const base = `/${country}`
 
   return (
     <>
       <header className="sticky top-0 z-40 bg-white border-b border-border">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="font-bold text-xl text-primary">
+          <Link href={base} className="font-bold text-xl text-primary">
             Store
           </Link>
 
           <nav className="hidden md:flex items-center gap-8">
-            <Link href="/products" className="text-sm font-medium hover:text-accent transition-colors">
+            <Link href={`${base}/products`} className="text-sm font-medium hover:text-accent transition-colors">
               Products
             </Link>
           </nav>
@@ -52,7 +56,7 @@ export default function Header() {
         {/* Mobile menu */}
         {menuOpen && (
           <div className="md:hidden border-t border-border px-4 py-4 flex flex-col gap-4">
-            <Link href="/products" className="text-sm font-medium" onClick={() => setMenuOpen(false)}>
+            <Link href={`${base}/products`} className="text-sm font-medium" onClick={() => setMenuOpen(false)}>
               Products
             </Link>
           </div>
