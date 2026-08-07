@@ -5,6 +5,7 @@ import ProductGallery from "@/components/store/ProductGallery"
 import ProductVariants from "@/components/store/ProductVariants"
 import { ReviewSummary } from "@/components/store/ProductReviews"
 import ProductReviews from "@/components/store/ProductReviews"
+import ProductTrustBadges from "@/components/store/ProductTrustBadges"
 import type { Metadata } from "next"
 
 interface Props {
@@ -79,6 +80,8 @@ export default async function ProductPage({ params }: Props) {
           )}
 
           <ProductVariants product={product} />
+
+          <ProductTrustBadges limitedTimeLabel={product.limited_time_label} />
         </div>
       </div>
 

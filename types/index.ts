@@ -36,6 +36,7 @@ export interface Product {
   seo_title?: string
   seo_description?: string
   allow_personalization: boolean
+  limited_time_label?: string | null
   created_at: string
   updated_at: string
   category?: Category

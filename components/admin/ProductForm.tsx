@@ -38,6 +38,7 @@ interface InitialProduct {
   seo_description: string | null
   country_codes: string[] | null
   allow_personalization: boolean
+  limited_time_label: string | null
   variants: {
     title: string
     sku: string | null
@@ -77,6 +78,7 @@ export default function ProductForm({ categories, product }: Props) {
   )
   const [isFeatured, setIsFeatured] = useState(product?.is_featured ?? false)
   const [allowPersonalization, setAllowPersonalization] = useState(product?.allow_personalization ?? false)
+  const [limitedTimeLabel, setLimitedTimeLabel] = useState(product?.limited_time_label ?? "")
   const [tags, setTags] = useState(product?.tags?.join(", ") ?? "")
   const [seoTitle, setSeoTitle] = useState(product?.seo_title ?? "")
   const [seoDescription, setSeoDescription] = useState(product?.seo_description ?? "")
@@ -175,6 +177,7 @@ export default function ProductForm({ categories, product }: Props) {
     seo_description: seoDescription.trim() || null,
     country_codes: selectedRegions.length ? selectedRegions : null,
     allow_personalization: allowPersonalization,
+    limited_time_label: limitedTimeLabel.trim() || null,
     variants: variants
       .filter(v => v.title && v.price)
       .map(v => ({
@@ -322,6 +325,19 @@ export default function ProductForm({ categories, product }: Props) {
             <span className="font-normal text-muted-foreground"> — shows &ldquo;Personal text (printed on item)&rdquo; field on the product page</span>
           </span>
         </label>
+
+        <div>
+          <label className="block text-xs font-medium mb-1">
+            Limited Time Offer label
+            <span className="font-normal text-muted-foreground ml-1">(leave blank to hide)</span>
+          </label>
+          <input
+            value={limitedTimeLabel}
+            onChange={e => setLimitedTimeLabel(e.target.value)}
+            placeholder="e.g. Save 20% at checkout · Ends Sunday"
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
       </section>
 
       {/* Images */}

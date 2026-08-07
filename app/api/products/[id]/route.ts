@@ -20,7 +20,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
   try {
     const body = await request.json()
-    const { title, description, category_id, tags, status, is_featured, images, seo_title, seo_description, variants, country_codes, allow_personalization } = body
+    const { title, description, category_id, tags, status, is_featured, images, seo_title, seo_description, variants, country_codes, allow_personalization, limited_time_label } = body
 
     if (!title || !variants?.length) {
       return NextResponse.json({ error: "Title and at least one variant are required" }, { status: 400 })
@@ -44,6 +44,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
         seo_description: seo_description || null,
         country_codes: country_codes?.length ? country_codes : null,
         allow_personalization: allow_personalization === true,
+        limited_time_label: limited_time_label?.trim() || null,
       })
       .eq("id", id)
       .select()
