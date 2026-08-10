@@ -41,7 +41,7 @@ export const defaultChildren: Child[] = [
 export const defaultChallenges: Challenge[] = [
   // Mia (5) — non-reader: icon-based quiz, self-report tasks only.
   {
-    id: makeId('chal'),
+    id: makeId(),
     title: 'Counting Fun',
     description: 'Solve the puzzle! Tap the picture with the right number of stars.',
     category: 'math',
@@ -56,7 +56,7 @@ export const defaultChallenges: Challenge[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: makeId('chal'),
+    id: makeId(),
     title: 'Draw & Doodle',
     description: 'Draw anything you like!',
     category: 'creative',
@@ -70,7 +70,7 @@ export const defaultChallenges: Challenge[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: makeId('chal'),
+    id: makeId(),
     title: 'Toy Pickup',
     description: 'Put your toys back in the bin!',
     category: 'home',
@@ -84,7 +84,7 @@ export const defaultChallenges: Challenge[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: makeId('chal'),
+    id: makeId(),
     title: 'Kind Heart',
     description: 'Give someone in your family a big hug today!',
     category: 'kindness',
@@ -100,7 +100,7 @@ export const defaultChallenges: Challenge[] = [
 
   // Sam (11)
   {
-    id: makeId('chal'),
+    id: makeId(),
     title: 'Math Quest',
     description: 'Solve the riddle to earn Stars!',
     category: 'math',
@@ -115,7 +115,7 @@ export const defaultChallenges: Challenge[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: makeId('chal'),
+    id: makeId(),
     title: 'Word Wizard',
     description: 'Pick the correctly spelled word.',
     category: 'english',
@@ -130,7 +130,7 @@ export const defaultChallenges: Challenge[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: makeId('chal'),
+    id: makeId(),
     title: 'Room Rescue',
     description: 'Tidy your room or help with a chore at home.',
     category: 'home',
@@ -144,7 +144,7 @@ export const defaultChallenges: Challenge[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: makeId('chal'),
+    id: makeId(),
     title: 'Kind Heart',
     description: 'Do something kind for your sibling today — don’t tell them it was a challenge.',
     category: 'kindness',
@@ -160,7 +160,7 @@ export const defaultChallenges: Challenge[] = [
 
   // Alex (13)
   {
-    id: makeId('chal'),
+    id: makeId(),
     title: 'Math Quest',
     description: 'Solve the riddle to earn Stars!',
     category: 'math',
@@ -175,7 +175,7 @@ export const defaultChallenges: Challenge[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: makeId('chal'),
+    id: makeId(),
     title: 'Word Wizard',
     description: 'Pick the correct word.',
     category: 'english',
@@ -190,7 +190,7 @@ export const defaultChallenges: Challenge[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: makeId('chal'),
+    id: makeId(),
     title: 'Room Rescue',
     description: 'Tidy your room or help with a chore at home.',
     category: 'home',
@@ -204,7 +204,7 @@ export const defaultChallenges: Challenge[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: makeId('chal'),
+    id: makeId(),
     title: 'Kind Heart',
     description: 'Do something kind for someone in your family today.',
     category: 'kindness',
@@ -221,12 +221,12 @@ export const defaultChallenges: Challenge[] = [
 
 // PRD §19 illustrative reward catalog — parent-editable.
 export const defaultRewards: Reward[] = [
-  { id: makeId('rwd'), name: '+30 min screen time', cost: 30, active: true },
-  { id: makeId('rwd'), name: 'Ice cream treat', cost: 45, active: true },
-  { id: makeId('rwd'), name: 'Stay up 30 min late', cost: 50, active: true },
-  { id: makeId('rwd'), name: 'Pick family movie night', cost: 70, active: true },
-  { id: makeId('rwd'), name: 'Small toy', cost: 140, active: true },
-  { id: makeId('rwd'), name: 'Family outing', cost: 200, active: true },
+  { id: makeId(), name: '+30 min screen time', cost: 30, active: true },
+  { id: makeId(), name: 'Ice cream treat', cost: 45, active: true },
+  { id: makeId(), name: 'Stay up 30 min late', cost: 50, active: true },
+  { id: makeId(), name: 'Pick family movie night', cost: 70, active: true },
+  { id: makeId(), name: 'Small toy', cost: 140, active: true },
+  { id: makeId(), name: 'Family outing', cost: 200, active: true },
 ];
 
 // PRD §22 — badges are recognition, not big rewards.

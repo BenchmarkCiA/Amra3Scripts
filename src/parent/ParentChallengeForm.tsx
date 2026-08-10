@@ -62,7 +62,7 @@ export function ParentChallengeForm({ onCreated }: { onCreated?: () => void }) {
     if (recurrence === 'once' && !dueDate) return;
 
     const challenge: Challenge = {
-      id: makeId('chal'),
+      id: makeId(),
       title: title.trim(),
       description: description.trim(),
       category,

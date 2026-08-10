@@ -10,7 +10,7 @@ export function ParentRewardsManager() {
   function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    dispatch({ type: 'ADD_REWARD', reward: { id: makeId('rwd'), name: name.trim(), cost, active: true } });
+    dispatch({ type: 'ADD_REWARD', reward: { id: makeId(), name: name.trim(), cost, active: true } });
     setName('');
     setCost(50);
   }

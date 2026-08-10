@@ -1,5 +1,8 @@
-export function makeId(prefix: string): string {
-  return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
+// A plain crypto.randomUUID() (not a prefixed id) so every locally-created
+// record can be written straight into Supabase's uuid primary key columns
+// with no id translation between the local reducer and the database.
+export function makeId(): string {
+  return crypto.randomUUID();
 }
 
 export function todayISO(): string {

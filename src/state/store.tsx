@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import type {
   Challenge,
   ChallengeCompletion,
@@ -14,6 +14,8 @@ import { defaultBadges, defaultChallenges, defaultChildren, defaultRewards } fro
 import { computeReward, defaultScoringConfig } from '../lib/scoring';
 import { makeId, todayISO } from '../lib/id';
 import { bumpStreak, initialStreak } from '../lib/streak';
+import { isSupabaseConfigured } from '../lib/supabaseClient';
+import { fetchAppState, syncActionToSupabase } from '../lib/supabaseSync';
 
 const STORAGE_KEY = 'family-quest-state-v1';
 const DEFAULT_PARENT_PIN = '1234';
@@ -61,11 +63,11 @@ function loadInitialState(): AppState {
   }
 }
 
-type Action =
-  | { type: 'COMPLETE_QUIZ'; childId: string; challengeId: string; correct: boolean }
-  | { type: 'COMPLETE_TASK'; childId: string; challengeId: string } // draw / selfreport
+export type Action =
+  | { type: 'COMPLETE_QUIZ'; childId: string; challengeId: string; correct: boolean; completionId?: string }
+  | { type: 'COMPLETE_TASK'; childId: string; challengeId: string; completionId?: string } // draw / selfreport
   | { type: 'RESOLVE_APPROVAL'; completionId: string; approve: boolean }
-  | { type: 'REDEEM_REWARD'; childId: string; rewardId: string }
+  | { type: 'REDEEM_REWARD'; childId: string; rewardId: string; redemptionId?: string }
   | { type: 'RESOLVE_REDEMPTION'; redemptionId: string; status: 'approved' | 'rejected' | 'delivered' }
   | { type: 'ADD_CHALLENGE'; challenge: Challenge }
   | { type: 'UPDATE_CHALLENGE'; challenge: Challenge }
@@ -77,7 +79,8 @@ type Action =
   | { type: 'UPDATE_SCORING_CONFIG'; config: ScoringConfig }
   | { type: 'SET_PARENT_PIN'; pin: string }
   | { type: 'ADJUST_STARS'; childId: string; amount: number; reason: string }
-  | { type: 'RESET_ALL' };
+  | { type: 'RESET_ALL' }
+  | { type: 'HYDRATE'; state: AppState };
 
 function creditChild(
   state: AppState,
@@ -89,10 +92,10 @@ function creditChild(
 ): Pick<AppState, 'children' | 'starTx' | 'xpTx'> {
   const children = state.children.map((c) => (c.id === childId ? { ...c, stars: c.stars + stars, xp: c.xp + xp } : c));
   const starTx: StarTransaction[] = stars !== 0
-    ? [...state.starTx, { id: makeId('startx'), childId, amount: stars, source, referenceId, createdAt: new Date().toISOString() }]
+    ? [...state.starTx, { id: makeId(), childId, amount: stars, source, referenceId, createdAt: new Date().toISOString() }]
     : state.starTx;
   const xpTx: XPTransaction[] = xp !== 0
-    ? [...state.xpTx, { id: makeId('xptx'), childId, amount: xp, source, referenceId, createdAt: new Date().toISOString() }]
+    ? [...state.xpTx, { id: makeId(), childId, amount: xp, source, referenceId, createdAt: new Date().toISOString() }]
     : state.xpTx;
   return { children, starTx, xpTx };
 }
@@ -117,7 +120,7 @@ function reducer(state: AppState, action: Action): AppState {
       }
       const reward = computeReward(state.scoringConfig, challenge.difficulty, challenge.category);
       const completion: ChallengeCompletion = {
-        id: makeId('comp'),
+        id: action.completionId ?? makeId(),
         challengeId: challenge.id,
         childId: action.childId,
         date,
@@ -138,7 +141,7 @@ function reducer(state: AppState, action: Action): AppState {
       const reward = computeReward(state.scoringConfig, challenge.difficulty, challenge.category);
       if (challenge.requiresApproval) {
         const completion: ChallengeCompletion = {
-          id: makeId('comp'),
+          id: action.completionId ?? makeId(),
           challengeId: challenge.id,
           childId: action.childId,
           date,
@@ -150,7 +153,7 @@ function reducer(state: AppState, action: Action): AppState {
         return { ...state, completions: [...state.completions, completion] };
       }
       const completion: ChallengeCompletion = {
-        id: makeId('comp'),
+        id: action.completionId ?? makeId(),
         challengeId: challenge.id,
         childId: action.childId,
         date,
@@ -194,10 +197,10 @@ function reducer(state: AppState, action: Action): AppState {
       const children = state.children.map((c) => (c.id === child.id ? { ...c, stars: c.stars - reward.cost } : c));
       const starTx: StarTransaction[] = [
         ...state.starTx,
-        { id: makeId('startx'), childId: child.id, amount: -reward.cost, source: `Reward: ${reward.name}`, referenceId: reward.id, createdAt: new Date().toISOString() },
+        { id: makeId(), childId: child.id, amount: -reward.cost, source: `Reward: ${reward.name}`, referenceId: reward.id, createdAt: new Date().toISOString() },
       ];
       const redemption: RewardRedemption = {
-        id: makeId('redeem'),
+        id: action.redemptionId ?? makeId(),
         childId: child.id,
         rewardId: reward.id,
         rewardName: reward.name,
@@ -215,7 +218,7 @@ function reducer(state: AppState, action: Action): AppState {
         const children = state.children.map((c) => (c.id === redemption.childId ? { ...c, stars: c.stars + redemption.cost } : c));
         const starTx: StarTransaction[] = [
           ...state.starTx,
-          { id: makeId('startx'), childId: redemption.childId, amount: redemption.cost, source: `Refund: ${redemption.rewardName}`, referenceId: redemption.id, createdAt: new Date().toISOString() },
+          { id: makeId(), childId: redemption.childId, amount: redemption.cost, source: `Refund: ${redemption.rewardName}`, referenceId: redemption.id, createdAt: new Date().toISOString() },
         ];
         const redemptions = state.redemptions.map((r) => (r.id === redemption.id ? { ...r, status: 'rejected' as const, resolvedAt: new Date().toISOString() } : r));
         return { ...state, children, starTx, redemptions };
@@ -247,6 +250,8 @@ function reducer(state: AppState, action: Action): AppState {
     }
     case 'RESET_ALL':
       return buildInitialState();
+    case 'HYDRATE':
+      return action.state;
     default:
       return state;
   }
@@ -254,19 +259,54 @@ function reducer(state: AppState, action: Action): AppState {
 
 interface StoreContextValue {
   state: AppState;
-  dispatch: React.Dispatch<Action>;
+  dispatch: (action: Action) => void;
+  loading: boolean;
 }
 
 const StoreContext = createContext<StoreContextValue | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined, loadInitialState);
+  const [state, reactDispatch] = useReducer(reducer, undefined, () => (isSupabaseConfigured ? buildInitialState() : loadInitialState()));
+  const [loading, setLoading] = useState(isSupabaseConfigured);
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    let cancelled = false;
+    fetchAppState()
+      .then((remote) => {
+        if (!cancelled && remote) reactDispatch({ type: 'HYDRATE', state: remote });
+      })
+      .catch((err) => console.error('Failed to load Family Quest data from Supabase', err))
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    // localStorage remains the persistence layer only when Supabase isn't
+    // configured (offline/demo mode) — otherwise Supabase is the source of
+    // truth and we don't want a stale local copy shadowing it.
+    if (isSupabaseConfigured) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  const value = useMemo(() => ({ state, dispatch }), [state]);
+  const dispatch = useCallback((action: Action) => {
+    let finalAction = action;
+    if (action.type === 'COMPLETE_QUIZ' && !action.completionId) finalAction = { ...action, completionId: makeId() };
+    if (action.type === 'COMPLETE_TASK' && !action.completionId) finalAction = { ...action, completionId: makeId() };
+    if (action.type === 'REDEEM_REWARD' && !action.redemptionId) finalAction = { ...action, redemptionId: makeId() };
+    reactDispatch(finalAction);
+    if (isSupabaseConfigured) {
+      syncActionToSupabase(finalAction, stateRef.current).catch((err) => console.error('Supabase sync failed', err));
+    }
+  }, []);
+
+  const value = useMemo(() => ({ state, dispatch, loading }), [state, loading, dispatch]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 

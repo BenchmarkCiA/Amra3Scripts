@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Difficulty } from '../types';
 import { useStore } from '../state/store';
+import { isSupabaseConfigured } from '../lib/supabaseClient';
 
 const DIFFICULTIES: Difficulty[] = [1, 2, 3, 4, 5];
 
@@ -113,9 +114,16 @@ export function ParentSettings() {
       </form>
 
       <div style={{ marginTop: 24 }}>
-        <button className="btn btn-danger" onClick={handleReset} type="button">
-          Reset all data to defaults
-        </button>
+        {isSupabaseConfigured ? (
+          <div className="empty-state" style={{ padding: 0, textAlign: 'start' }}>
+            Data is stored in Supabase, so there's no local "reset to defaults" button — that would only reset what's on
+            this device, not the family's real history. Wipe or reseed the Supabase project directly if that's what you want.
+          </div>
+        ) : (
+          <button className="btn btn-danger" onClick={handleReset} type="button">
+            Reset all data to defaults
+          </button>
+        )}
       </div>
     </>
   );
