@@ -1,0 +1,116 @@
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@600;700;800&display=swap');
+
+:root {
+  --font-display: 'Baloo 2', sans-serif;
+  --font-body: 'Nunito', sans-serif;
+
+  --text-heading: #f7f2ff;
+  --text-muted-50: rgba(247, 242, 255, 0.5);
+  --text-muted-65: rgba(247, 242, 255, 0.65);
+  --text-muted-35: rgba(247, 242, 255, 0.35);
+
+  --success: #34d399;
+  --coin: #f4c14f;
+  --error: #f47c9c;
+
+  --modal-surface: #1b1730;
+  --modal-border: rgba(255, 255, 255, 0.14);
+  --card-bg: rgba(255, 255, 255, 0.07);
+  --card-border: rgba(255, 255, 255, 0.1);
+  --track-bg: rgba(255, 255, 255, 0.1);
+
+  --radius-card: 16px;
+  --radius-pill: 20px;
+  --radius-modal: 22px;
+
+  --cat-math: #4f8fd1;
+  --cat-english: #6c7bf0;
+  --cat-drawing: #df66b8;
+  --cat-chores: #33ba9d;
+  --cat-learn: #f4c14f;
+  --cat-reading: #4f8fd1;
+  --cat-exercise: #df66b8;
+  --cat-kindness: #6c7bf0;
+  --cat-family: #f4a84f;
+
+  color-scheme: dark;
+}
+
+.theme-mia {
+  --accent: #ef7fc2;
+  --accent-strong: #df66b8;
+  --glow: rgba(239, 127, 194, 0.4);
+  --bg-gradient:
+    radial-gradient(circle at 15% 10%, rgba(239, 127, 194, 0.35), transparent 55%),
+    radial-gradient(circle at 90% 5%, rgba(108, 123, 240, 0.25), transparent 50%),
+    linear-gradient(180deg, #241a38 0%, #180f27 60%, #0f0a1c 100%);
+}
+
+.theme-sam {
+  --accent: #38d0b0;
+  --accent-strong: #2f9c86;
+  --glow: rgba(56, 208, 176, 0.4);
+  --bg-gradient:
+    radial-gradient(circle at 88% 8%, rgba(56, 208, 176, 0.3), transparent 55%),
+    radial-gradient(circle at 8% 85%, rgba(239, 127, 194, 0.2), transparent 50%),
+    linear-gradient(180deg, #12262a 0%, #0e1b24 60%, #0a1219 100%);
+}
+
+.theme-alex {
+  --accent: #6c7bf0;
+  --accent-strong: #4650b0;
+  --glow: rgba(108, 123, 240, 0.4);
+  --bg-gradient:
+    radial-gradient(circle at 50% 0%, rgba(108, 123, 240, 0.32), transparent 55%),
+    radial-gradient(circle at 95% 60%, rgba(244, 193, 79, 0.18), transparent 50%),
+    linear-gradient(180deg, #14131f 0%, #0d0c15 60%, #060509 100%);
+}
+
+.theme-parent {
+  --accent: #f4c14f;
+  --accent-strong: #d19f2e;
+  --glow: rgba(244, 193, 79, 0.35);
+  --bg-gradient:
+    radial-gradient(circle at 20% 0%, rgba(244, 193, 79, 0.2), transparent 55%),
+    radial-gradient(circle at 90% 80%, rgba(108, 123, 240, 0.2), transparent 50%),
+    linear-gradient(180deg, #1a1626 0%, #120f1c 60%, #0a0812 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background: #0a0812;
+  color: var(--text-heading);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button {
+  font-family: inherit;
+  border: none;
+  cursor: pointer;
+  background: none;
+  color: inherit;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+}
