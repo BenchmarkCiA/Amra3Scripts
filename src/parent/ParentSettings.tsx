@@ -1,9 +1,65 @@
 import { useState } from 'react';
-import type { Difficulty } from '../types';
+import type { Difficulty, Language } from '../types';
 import { useStore } from '../state/store';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 
 const DIFFICULTIES: Difficulty[] = [1, 2, 3, 4, 5];
+
+function KidNamesCard() {
+  const { state, dispatch } = useStore();
+  const [names, setNames] = useState<Record<string, string>>(() => Object.fromEntries(state.children.map((c) => [c.id, c.name])));
+  const [savedId, setSavedId] = useState<string | null>(null);
+
+  function handleSave(childId: string) {
+    const name = (names[childId] ?? '').trim();
+    if (!name) return;
+    dispatch({ type: 'UPDATE_CHILD_NAME', childId, name });
+    setSavedId(childId);
+    setTimeout(() => setSavedId(null), 1500);
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <div className="section-title" style={{ marginBottom: 10 }}>
+        Kids
+      </div>
+      {state.children.map((child) => (
+        <div key={child.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+          <input
+            className="form-input"
+            value={names[child.id] ?? ''}
+            onChange={(e) => setNames((prev) => ({ ...prev, [child.id]: e.target.value }))}
+          />
+          <button type="button" className="btn btn-secondary" style={{ width: 'auto', padding: '10px 16px' }} onClick={() => handleSave(child.id)}>
+            {savedId === child.id ? 'Saved!' : 'Save'}
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function LanguageCard() {
+  const { state, dispatch } = useStore();
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <div className="form-group" style={{ marginBottom: 0 }}>
+        <label className="form-label">App language</label>
+        <select
+          className="form-select"
+          value={state.language}
+          onChange={(e) => dispatch({ type: 'SET_LANGUAGE', language: e.target.value as Language })}
+        >
+          <option value="en">English</option>
+          <option value="he">עברית (Hebrew)</option>
+        </select>
+        <div className="empty-state" style={{ padding: 0, marginTop: 8, textAlign: 'start' }}>
+          Switches the app's interface to Hebrew with right-to-left layout. Challenge and quiz content stays in English for now.
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function ParentSettings() {
   const { state, dispatch } = useStore();
@@ -33,6 +89,9 @@ export function ParentSettings() {
     <>
       <div className="screen-header">Settings</div>
       <div className="screen-subheader">Configure scoring, streaks and the parent PIN.</div>
+
+      <KidNamesCard />
+      <LanguageCard />
 
       <form onSubmit={handleSave}>
         <div className="card" style={{ marginBottom: 16 }}>

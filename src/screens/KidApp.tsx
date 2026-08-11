@@ -8,6 +8,7 @@ import { KidQuests } from './KidQuests';
 import { RewardShop } from './RewardShop';
 import { StreaksBadges } from './StreaksBadges';
 import { TaskDetailModal } from './TaskDetailModal';
+import { t } from '../lib/i18n';
 
 interface Props {
   childId: string;
@@ -16,6 +17,7 @@ interface Props {
 
 export function KidApp({ childId, onSwitchProfile }: Props) {
   const { state } = useStore();
+  const lang = state.language;
   const child = state.children.find((c) => c.id === childId);
   const [screen, setScreen] = useState<KidScreen>('home');
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
@@ -30,10 +32,10 @@ export function KidApp({ childId, onSwitchProfile }: Props) {
         <StarField />
         <div style={{ position: 'relative', zIndex: 1 }}>
           <button className="back-btn" style={{ marginInlineStart: 20, marginTop: 12 }} onClick={onSwitchProfile}>
-            ← Switch profile
+            ← {t(lang, 'switchProfile')}
           </button>
         </div>
-        <TopBar stars={child.stars} />
+        <TopBar stars={child.stars} lang={lang} />
         <div className="screen-content">
           {screen === 'home' && (
             <KidHome child={child} onOpenTask={setActiveTaskId} onSeeAll={() => setScreen('quests')} />
@@ -42,7 +44,7 @@ export function KidApp({ childId, onSwitchProfile }: Props) {
           {screen === 'rewards' && <RewardShop child={child} />}
           {screen === 'streaks' && <StreaksBadges child={child} />}
         </div>
-        <TabBar active={screen} onChange={setScreen} />
+        <TabBar active={screen} onChange={setScreen} lang={lang} />
       </div>
       {activeChallenge && (
         <TaskDetailModal childId={child.id} challenge={activeChallenge} onClose={() => setActiveTaskId(null)} />

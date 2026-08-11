@@ -1,28 +1,32 @@
+import type { Language } from '../types';
+import { t } from '../lib/i18n';
+
 export type KidScreen = 'home' | 'quests' | 'rewards' | 'streaks';
 
-const TABS: { key: KidScreen; label: string }[] = [
-  { key: 'home', label: 'Home' },
-  { key: 'quests', label: 'Quests' },
-  { key: 'rewards', label: 'Rewards' },
-  { key: 'streaks', label: 'Streaks' },
+const TAB_KEYS = [
+  { key: 'home' as const, labelKey: 'tabHome' as const },
+  { key: 'quests' as const, labelKey: 'tabQuests' as const },
+  { key: 'rewards' as const, labelKey: 'tabRewards' as const },
+  { key: 'streaks' as const, labelKey: 'tabStreaks' as const },
 ];
 
 interface Props {
   active: KidScreen;
   onChange: (screen: KidScreen) => void;
+  lang: Language;
 }
 
-export function TabBar({ active, onChange }: Props) {
+export function TabBar({ active, onChange, lang }: Props) {
   return (
     <div className="tab-bar">
-      {TABS.map((tab) => (
+      {TAB_KEYS.map((tab) => (
         <button
           key={tab.key}
           className={`tab-item${active === tab.key ? ' active' : ''}`}
           onClick={() => onChange(tab.key)}
         >
           <span className="tab-dot" />
-          {tab.label}
+          {t(lang, tab.labelKey)}
         </button>
       ))}
     </div>

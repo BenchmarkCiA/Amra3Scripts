@@ -77,7 +77,7 @@ export function ParentChallengeForm({ onCreated }: { onCreated?: () => void }) {
       ...(recurrence === 'once' ? { dueDate } : {}),
       ...(recurrence === 'weekly' ? { weekday } : {}),
       ...(kind === 'quiz'
-        ? { quiz: { question: question.trim(), choices: choices.map((c) => c.trim()), correctIndex } }
+        ? { quiz: [{ question: question.trim(), choices: choices.map((c) => c.trim()), correctIndex }] }
         : {}),
     };
 
@@ -128,8 +128,9 @@ export function ParentChallengeForm({ onCreated }: { onCreated?: () => void }) {
         <label className="form-label">Challenge type</label>
         <select className="form-select" value={kind} onChange={(e) => setKind(e.target.value as ChallengeKind)}>
           <option value="selfreport">Self-report (child marks it done)</option>
-          <option value="quiz">Quiz (auto-graded)</option>
+          <option value="quiz">Quiz (auto-graded, 1 question)</option>
           <option value="draw">Drawing</option>
+          <option value="discovery">Discovery (pick-a-subject fun fact)</option>
         </select>
       </div>
 

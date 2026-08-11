@@ -28,6 +28,11 @@ export function ParentDashboard() {
                 <div className="quest-reward">
                   {CATEGORY_LABEL[challenge!.category]} · +{completion.starsEarned} ⭐ +{completion.xpEarned} XP
                 </div>
+                {completion.note && (
+                  <div className="reward-preview" style={{ marginTop: 6 }}>
+                    "{completion.note}"
+                  </div>
+                )}
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
@@ -93,19 +98,24 @@ export function ParentDashboard() {
             </div>
             {items.length === 0 && <div className="empty-state" style={{ padding: '10px 0' }}>No quests today.</div>}
             {items.map(({ challenge, completion }) => (
-              <div key={challenge.id} className="approval-row">
-                <div className="quest-title">
-                  {CATEGORY_LABEL[challenge.category]} — {challenge.title}
+              <div key={challenge.id} className="approval-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                  <div className="quest-title">
+                    {CATEGORY_LABEL[challenge.category]} — {challenge.title}
+                  </div>
+                  <div className="quest-reward">
+                    {completion
+                      ? completion.status === 'awaiting_approval'
+                        ? 'Waiting for approval'
+                        : completion.status === 'rejected'
+                          ? 'Rejected'
+                          : completion.score
+                            ? `${completion.score.correct}/${completion.score.total} · +${completion.starsEarned} ⭐`
+                            : `Done · +${completion.starsEarned} ⭐`
+                      : 'Not started'}
+                  </div>
                 </div>
-                <div className="quest-reward">
-                  {completion
-                    ? completion.status === 'awaiting_approval'
-                      ? 'Waiting for approval'
-                      : completion.status === 'rejected'
-                        ? 'Rejected'
-                        : `Done · +${completion.starsEarned} ⭐`
-                    : 'Not started'}
-                </div>
+                {completion?.note && <div className="reward-preview" style={{ marginTop: 6 }}>"{completion.note}"</div>}
               </div>
             ))}
           </div>

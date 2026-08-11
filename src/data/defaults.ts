@@ -1,60 +1,105 @@
-import type { Badge, Challenge, Child, Reward } from '../types';
+import type { Badge, Challenge, Child, QuizQuestion, Reward } from '../types';
 import { makeId } from '../lib/id';
 
 export const defaultChildren: Child[] = [
-  {
-    id: 'mia',
-    name: 'Mia',
-    age: 5,
-    avatarTheme: 'mia',
-    accentColor: '#df66b8',
-    readingLevel: 'non-reader',
-    stars: 0,
-    xp: 0,
-  },
-  {
-    id: 'sam',
-    name: 'Sam',
-    age: 11,
-    avatarTheme: 'sam',
-    accentColor: '#33ba9d',
-    readingLevel: 'fluent',
-    stars: 0,
-    xp: 0,
-  },
-  {
-    id: 'alex',
-    name: 'Alex',
-    age: 13,
-    avatarTheme: 'alex',
-    accentColor: '#6c7bf0',
-    readingLevel: 'fluent',
-    stars: 0,
-    xp: 0,
-  },
+  { id: 'mia', name: 'Mia', age: 5, avatarTheme: 'mia', accentColor: '#df66b8', readingLevel: 'non-reader', stars: 0, xp: 0 },
+  { id: 'sam', name: 'Sam', age: 11, avatarTheme: 'sam', accentColor: '#33ba9d', readingLevel: 'fluent', stars: 0, xp: 0 },
+  { id: 'alex', name: 'Alex', age: 13, avatarTheme: 'alex', accentColor: '#6c7bf0', readingLevel: 'fluent', stars: 0, xp: 0 },
 ];
 
-// Seed daily challenge templates per child, mirroring the Jahnoon design
-// content while mapping onto PRD categories/difficulty. These are
-// createdBy: 'system' so they're clearly distinguishable from anything a
-// parent adds later via the Create Challenge form.
-export const defaultChallenges: Challenge[] = [
-  // Mia (5) — non-reader: icon-based quiz, self-report tasks only.
-  {
+const miaMath: QuizQuestion[] = [
+  { question: '2 + 1 = ?', choices: ['2', '3', '4'], correctIndex: 1 },
+  { question: '1 + 1 = ?', choices: ['1', '2', '3'], correctIndex: 1 },
+  { question: '3 + 2 = ?', choices: ['4', '5', '6'], correctIndex: 1 },
+  { question: '4 - 1 = ?', choices: ['2', '3', '4'], correctIndex: 1 },
+  { question: '2 + 2 = ?', choices: ['3', '4', '5'], correctIndex: 1 },
+  { question: '5 - 2 = ?', choices: ['2', '3', '4'], correctIndex: 1 },
+  { question: '3 + 3 = ?', choices: ['5', '6', '7'], correctIndex: 1 },
+  { question: '4 + 1 = ?', choices: ['4', '5', '6'], correctIndex: 1 },
+  { question: '5 - 1 = ?', choices: ['3', '4', '5'], correctIndex: 1 },
+  { question: '1 + 4 = ?', choices: ['4', '5', '6'], correctIndex: 1 },
+];
+
+const samMath: QuizQuestion[] = [
+  { question: '7 x 5 = ?', choices: ['30', '35', '45'], correctIndex: 1 },
+  { question: '9 x 6 = ?', choices: ['52', '54', '56'], correctIndex: 1 },
+  { question: '48 / 6 = ?', choices: ['6', '7', '8'], correctIndex: 2 },
+  { question: '13 + 29 = ?', choices: ['40', '42', '44'], correctIndex: 1 },
+  { question: '81 / 9 = ?', choices: ['8', '9', '10'], correctIndex: 1 },
+  { question: '6 x 7 = ?', choices: ['40', '42', '44'], correctIndex: 1 },
+  { question: '100 - 37 = ?', choices: ['63', '67', '73'], correctIndex: 0 },
+  { question: 'Half of 90 is?', choices: ['40', '45', '50'], correctIndex: 1 },
+  { question: '8 x 8 = ?', choices: ['56', '64', '72'], correctIndex: 1 },
+  { question: '3 x 12 = ?', choices: ['24', '36', '39'], correctIndex: 1 },
+];
+
+const samEnglish: QuizQuestion[] = [
+  { question: 'Which is spelled correctly?', choices: ['Recieve', 'Receive', 'Receeve'], correctIndex: 1, exampleSentence: "I can't wait to receive my birthday present." },
+  { question: 'Which word means "very happy"?', choices: ['Furious', 'Joyful', 'Exhausted'], correctIndex: 1, exampleSentence: 'She was joyful when her team won the game.' },
+  { question: 'Which is spelled correctly?', choices: ['Definately', 'Definitely', 'Definitly'], correctIndex: 1, exampleSentence: "I'll definitely be there on time." },
+  { question: 'Which word means "to look for"?', choices: ['Search', 'Sell', 'Sleep'], correctIndex: 0, exampleSentence: 'We had to search the whole house for the missing key.' },
+  { question: 'Which is spelled correctly?', choices: ['Seperate', 'Separate', 'Seprate'], correctIndex: 1, exampleSentence: 'Please keep the two colors separate.' },
+  { question: 'What is a synonym for "big"?', choices: ['Tiny', 'Huge', 'Quiet'], correctIndex: 1, exampleSentence: 'The elephant was absolutely huge.' },
+  { question: 'Which word means the opposite of "brave"?', choices: ['Fearful', 'Bold', 'Strong'], correctIndex: 0, exampleSentence: 'The fearful kitten hid under the bed.' },
+  { question: 'Which is spelled correctly?', choices: ['Beleive', 'Believe', 'Belive'], correctIndex: 1, exampleSentence: 'I believe you can do it.' },
+  { question: 'What is a synonym for "quick"?', choices: ['Slow', 'Fast', 'Heavy'], correctIndex: 1, exampleSentence: 'The fast runner won the race easily.' },
+  { question: 'Which word completes: "She ___ to the store yesterday"?', choices: ['go', 'goes', 'went'], correctIndex: 2, exampleSentence: 'She went to the store yesterday.' },
+];
+
+const alexMath: QuizQuestion[] = [
+  { question: 'What is 15% of 60?', choices: ['6', '9', '15'], correctIndex: 1 },
+  { question: 'What is 3/4 as a decimal?', choices: ['0.34', '0.75', '0.43'], correctIndex: 1 },
+  { question: 'Solve: 2x + 4 = 12. x = ?', choices: ['3', '4', '5'], correctIndex: 1 },
+  { question: 'What is 20% of 150?', choices: ['20', '30', '40'], correctIndex: 1 },
+  { question: 'What is the square root of 144?', choices: ['11', '12', '13'], correctIndex: 1 },
+  { question: 'Solve: 5x - 3 = 17. x = ?', choices: ['3', '4', '5'], correctIndex: 1 },
+  { question: 'What is 7^2?', choices: ['14', '42', '49'], correctIndex: 2 },
+  { question: 'What is 1/8 as a percentage?', choices: ['8%', '12.5%', '18%'], correctIndex: 1 },
+  { question: 'What is the perimeter of a 5x8 rectangle?', choices: ['13', '26', '40'], correctIndex: 1 },
+  { question: 'What is 45% of 200?', choices: ['80', '90', '100'], correctIndex: 1 },
+];
+
+const alexEnglish: QuizQuestion[] = [
+  { question: '"___ going to the mall later."', choices: ['Their', 'There', "They're"], correctIndex: 2, exampleSentence: "They're going to the mall later to buy shoes." },
+  { question: 'Which word means "to examine closely"?', choices: ['Scrutinize', 'Ignore', 'Skim'], correctIndex: 0, exampleSentence: 'The detective scrutinized every piece of evidence.' },
+  { question: 'Choose the correct word: "Its / It\'s raining outside."', choices: ['Its', "It's"], correctIndex: 1, exampleSentence: "It's raining outside, so bring an umbrella." },
+  { question: 'What is a synonym for "ambiguous"?', choices: ['Unclear', 'Obvious', 'Loud'], correctIndex: 0, exampleSentence: 'His answer was ambiguous, so no one knew what he meant.' },
+  { question: 'Which is spelled correctly?', choices: ['Occassion', 'Occasion', 'Ocasion'], correctIndex: 1, exampleSentence: 'Her birthday is a special occasion.' },
+  { question: 'What is the opposite of "generous"?', choices: ['Stingy', 'Kind', 'Wealthy'], correctIndex: 0, exampleSentence: 'The stingy man never shared his snacks.' },
+  { question: 'Choose the correct word: "You\'re / Your bag is on the table."', choices: ["You're", 'Your'], correctIndex: 1, exampleSentence: 'Your bag is on the table by the door.' },
+  { question: 'What is a synonym for "persistent"?', choices: ['Determined', 'Lazy', 'Nervous'], correctIndex: 0, exampleSentence: 'She was persistent and kept practicing until she improved.' },
+  { question: 'Which is spelled correctly?', choices: ['Neccessary', 'Necessary', 'Necesary'], correctIndex: 1, exampleSentence: 'It is necessary to wear a helmet when biking.' },
+  { question: 'What does "procrastinate" mean?', choices: ['To delay doing something', 'To finish early', 'To celebrate'], correctIndex: 0, exampleSentence: "Don't procrastinate — start your homework now." },
+];
+
+function quizChallenge(
+  title: string,
+  description: string,
+  assignedTo: string[],
+  difficulty: Challenge['difficulty'],
+  category: 'math' | 'english',
+  quiz: QuizQuestion[],
+): Challenge {
+  return {
     id: makeId(),
-    title: 'Counting Fun',
-    description: 'Solve the puzzle! Tap the picture with the right number of stars.',
-    category: 'math',
+    title,
+    description,
+    category,
     kind: 'quiz',
-    difficulty: 1,
+    difficulty,
     requiresApproval: false,
     recurrence: 'daily',
-    assignedTo: ['mia'],
+    assignedTo,
     createdBy: 'system',
-    quiz: { question: '2 + 1 = ?', choices: ['2', '3', '4'], correctIndex: 1 },
+    quiz,
     active: true,
     createdAt: new Date().toISOString(),
-  },
+  };
+}
+
+export const defaultChallenges: Challenge[] = [
+  // Mia (5) — non-reader: icon-based quiz, self-report tasks only.
+  quizChallenge('Counting Fun', 'Solve the puzzle! Tap the picture with the right number.', ['mia'], 1, 'math', miaMath),
   {
     id: makeId(),
     title: 'Draw & Doodle',
@@ -97,38 +142,24 @@ export const defaultChallenges: Challenge[] = [
     active: true,
     createdAt: new Date().toISOString(),
   },
+  {
+    id: makeId(),
+    title: "Today's Discovery",
+    description: 'Pick a subject and learn a fun fact!',
+    category: 'discovery',
+    kind: 'discovery',
+    difficulty: 1,
+    requiresApproval: false,
+    recurrence: 'daily',
+    assignedTo: ['mia'],
+    createdBy: 'system',
+    active: true,
+    createdAt: new Date().toISOString(),
+  },
 
   // Sam (11)
-  {
-    id: makeId(),
-    title: 'Math Quest',
-    description: 'Solve the riddle to earn Stars!',
-    category: 'math',
-    kind: 'quiz',
-    difficulty: 3,
-    requiresApproval: false,
-    recurrence: 'daily',
-    assignedTo: ['sam'],
-    createdBy: 'system',
-    quiz: { question: '7 x 5 = ?', choices: ['30', '35', '45'], correctIndex: 1 },
-    active: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: makeId(),
-    title: 'Word Wizard',
-    description: 'Pick the correctly spelled word.',
-    category: 'english',
-    kind: 'quiz',
-    difficulty: 3,
-    requiresApproval: false,
-    recurrence: 'daily',
-    assignedTo: ['sam'],
-    createdBy: 'system',
-    quiz: { question: 'Which is spelled correctly?', choices: ['Recieve', 'Receive', 'Receeve'], correctIndex: 1 },
-    active: true,
-    createdAt: new Date().toISOString(),
-  },
+  quizChallenge('Math Quest', 'Solve 10 questions to earn Stars!', ['sam'], 3, 'math', samMath),
+  quizChallenge('Word Wizard', 'Pick the right word, 10 rounds!', ['sam'], 3, 'english', samEnglish),
   {
     id: makeId(),
     title: 'Room Rescue',
@@ -157,38 +188,24 @@ export const defaultChallenges: Challenge[] = [
     active: true,
     createdAt: new Date().toISOString(),
   },
+  {
+    id: makeId(),
+    title: "Today's Discovery",
+    description: 'Pick a subject and learn a fun fact!',
+    category: 'discovery',
+    kind: 'discovery',
+    difficulty: 2,
+    requiresApproval: false,
+    recurrence: 'daily',
+    assignedTo: ['sam'],
+    createdBy: 'system',
+    active: true,
+    createdAt: new Date().toISOString(),
+  },
 
   // Alex (13)
-  {
-    id: makeId(),
-    title: 'Math Quest',
-    description: 'Solve the riddle to earn Stars!',
-    category: 'math',
-    kind: 'quiz',
-    difficulty: 4,
-    requiresApproval: false,
-    recurrence: 'daily',
-    assignedTo: ['alex'],
-    createdBy: 'system',
-    quiz: { question: 'What is 15% of 60?', choices: ['6', '9', '15'], correctIndex: 1 },
-    active: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: makeId(),
-    title: 'Word Wizard',
-    description: 'Pick the correct word.',
-    category: 'english',
-    kind: 'quiz',
-    difficulty: 3,
-    requiresApproval: false,
-    recurrence: 'daily',
-    assignedTo: ['alex'],
-    createdBy: 'system',
-    quiz: { question: '"___ going to the mall later."', choices: ['Their', 'There', "They're"], correctIndex: 2 },
-    active: true,
-    createdAt: new Date().toISOString(),
-  },
+  quizChallenge('Math Quest', 'Solve 10 questions to earn Stars!', ['alex'], 4, 'math', alexMath),
+  quizChallenge('Word Wizard', 'Pick the right word, 10 rounds!', ['alex'], 3, 'english', alexEnglish),
   {
     id: makeId(),
     title: 'Room Rescue',
@@ -209,6 +226,20 @@ export const defaultChallenges: Challenge[] = [
     description: 'Do something kind for someone in your family today.',
     category: 'kindness',
     kind: 'selfreport',
+    difficulty: 2,
+    requiresApproval: false,
+    recurrence: 'daily',
+    assignedTo: ['alex'],
+    createdBy: 'system',
+    active: true,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: makeId(),
+    title: "Today's Discovery",
+    description: 'Pick a subject and learn a fun fact!',
+    category: 'discovery',
+    kind: 'discovery',
     difficulty: 2,
     requiresApproval: false,
     recurrence: 'daily',

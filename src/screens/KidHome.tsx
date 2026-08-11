@@ -3,6 +3,7 @@ import { useStore } from '../state/store';
 import { Mascot } from '../components/Mascot';
 import { getTodayItemsForChild, isDone } from '../lib/selectors';
 import { CATEGORY_COLOR, computeReward } from '../lib/scoring';
+import { t } from '../lib/i18n';
 import { todayISO } from '../lib/id';
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 
 export function KidHome({ child, onOpenTask, onSeeAll }: Props) {
   const { state } = useStore();
+  const lang = state.language;
   const items = getTodayItemsForChild(state, child.id, todayISO());
 
   const affordableRewards = state.rewards.filter((r) => r.active);
@@ -23,15 +25,17 @@ export function KidHome({ child, onOpenTask, onSeeAll }: Props) {
 
   return (
     <>
-      <div className="screen-header">Hey {child.name}</div>
-      <div className="screen-subheader">Here's your quest log for today.</div>
+      <div className="screen-header">
+        {t(lang, 'hey')} {child.name}
+      </div>
+      <div className="screen-subheader">{t(lang, 'questLogToday')}</div>
 
       <Mascot child={child} />
 
       {nextReward && (
         <div className="card progress-card">
           <div className="progress-label-row">
-            <span>Next: {nextReward.name}</span>
+            <span>{nextReward.name}</span>
             <span>
               {child.stars} / {nextReward.cost}
             </span>
@@ -43,9 +47,9 @@ export function KidHome({ child, onOpenTask, onSeeAll }: Props) {
       )}
 
       <div className="section-row">
-        <div className="section-title">Today's Quests</div>
+        <div className="section-title">{t(lang, 'todaysQuests')}</div>
         <button className="link" onClick={onSeeAll}>
-          See all
+          {t(lang, 'seeAll')}
         </button>
       </div>
       <div className="quest-list">
@@ -64,7 +68,7 @@ export function KidHome({ child, onOpenTask, onSeeAll }: Props) {
                 <div className="quest-title">{challenge.title}</div>
                 <div className="quest-reward">
                   {completion?.status === 'awaiting_approval'
-                    ? 'Waiting for approval'
+                    ? t(lang, 'waitingApproval')
                     : `+${reward.stars} ⭐ +${reward.xp} XP`}
                 </div>
               </div>
@@ -73,7 +77,7 @@ export function KidHome({ child, onOpenTask, onSeeAll }: Props) {
             </button>
           );
         })}
-        {items.length === 0 && <div className="empty-state">No quests assigned yet — check back soon!</div>}
+        {items.length === 0 && <div className="empty-state">{t(lang, 'noQuestsYet')}</div>}
       </div>
     </>
   );

@@ -3,6 +3,7 @@ import type {
   Challenge,
   ChallengeCompletion,
   Child,
+  Language,
   Reward,
   RewardRedemption,
   ScoringConfig,
@@ -31,6 +32,7 @@ export interface AppState {
   streaks: Record<string, StreakInfo>;
   scoringConfig: ScoringConfig;
   parentPin: string;
+  language: Language;
 }
 
 function buildInitialState(): AppState {
@@ -47,6 +49,7 @@ function buildInitialState(): AppState {
     streaks,
     scoringConfig: defaultScoringConfig,
     parentPin: DEFAULT_PARENT_PIN,
+    language: 'en',
   };
 }
 
@@ -57,15 +60,15 @@ function loadInitialState(): AppState {
     const parsed = JSON.parse(raw) as AppState;
     // Guard against a corrupted / pre-migration blob.
     if (!parsed.children || !parsed.scoringConfig) return buildInitialState();
-    return parsed;
+    return { ...parsed, language: parsed.language ?? 'en' };
   } catch {
     return buildInitialState();
   }
 }
 
 export type Action =
-  | { type: 'COMPLETE_QUIZ'; childId: string; challengeId: string; correct: boolean; completionId?: string }
-  | { type: 'COMPLETE_TASK'; childId: string; challengeId: string; completionId?: string } // draw / selfreport
+  | { type: 'COMPLETE_QUIZ'; childId: string; challengeId: string; correctCount: number; totalQuestions: number; completionId?: string }
+  | { type: 'COMPLETE_TASK'; childId: string; challengeId: string; note?: string; completionId?: string } // draw / selfreport / discovery
   | { type: 'RESOLVE_APPROVAL'; completionId: string; approve: boolean }
   | { type: 'REDEEM_REWARD'; childId: string; rewardId: string; redemptionId?: string }
   | { type: 'RESOLVE_REDEMPTION'; redemptionId: string; status: 'approved' | 'rejected' | 'delivered' }
@@ -78,6 +81,8 @@ export type Action =
   | { type: 'DELETE_REWARD'; rewardId: string }
   | { type: 'UPDATE_SCORING_CONFIG'; config: ScoringConfig }
   | { type: 'SET_PARENT_PIN'; pin: string }
+  | { type: 'SET_LANGUAGE'; language: Language }
+  | { type: 'UPDATE_CHILD_NAME'; childId: string; name: string }
   | { type: 'ADJUST_STARS'; childId: string; amount: number; reason: string }
   | { type: 'RESET_ALL' }
   | { type: 'HYDRATE'; state: AppState };
@@ -115,9 +120,6 @@ function reducer(state: AppState, action: Action): AppState {
       const challenge = state.challenges.find((c) => c.id === action.challengeId);
       if (!challenge) return state;
       const date = todayISO();
-      if (!action.correct) {
-        return state; // wrong answer: no state change, child just retries
-      }
       const reward = computeReward(state.scoringConfig, challenge.difficulty, challenge.category);
       const completion: ChallengeCompletion = {
         id: action.completionId ?? makeId(),
@@ -127,6 +129,7 @@ function reducer(state: AppState, action: Action): AppState {
         status: 'completed',
         starsEarned: reward.stars,
         xpEarned: reward.xp,
+        score: { correct: action.correctCount, total: action.totalQuestions },
         completedAt: new Date().toISOString(),
       };
       const credited = creditChild(state, action.childId, reward.stars, reward.xp, `Challenge: ${challenge.title}`, challenge.id);
@@ -148,6 +151,7 @@ function reducer(state: AppState, action: Action): AppState {
           status: 'awaiting_approval',
           starsEarned: reward.stars,
           xpEarned: reward.xp,
+          note: action.note,
           completedAt: new Date().toISOString(),
         };
         return { ...state, completions: [...state.completions, completion] };
@@ -160,6 +164,7 @@ function reducer(state: AppState, action: Action): AppState {
         status: 'completed',
         starsEarned: reward.stars,
         xpEarned: reward.xp,
+        note: action.note,
         completedAt: new Date().toISOString(),
       };
       const credited = creditChild(state, action.childId, reward.stars, reward.xp, `Challenge: ${challenge.title}`, challenge.id);
@@ -244,6 +249,10 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, scoringConfig: action.config };
     case 'SET_PARENT_PIN':
       return { ...state, parentPin: action.pin };
+    case 'SET_LANGUAGE':
+      return { ...state, language: action.language };
+    case 'UPDATE_CHILD_NAME':
+      return { ...state, children: state.children.map((c) => (c.id === action.childId ? { ...c, name: action.name } : c)) };
     case 'ADJUST_STARS': {
       const credited = creditChild(state, action.childId, action.amount, 0, action.reason, 'manual');
       return { ...state, ...credited };

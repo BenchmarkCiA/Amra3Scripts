@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Challenge } from '../types';
+import type { Challenge, QuizQuestion } from '../types';
 import { useStore } from '../state/store';
-import { CATEGORY_COLOR, CATEGORY_LABEL, computeReward } from '../lib/scoring';
+import { CATEGORY_COLOR, computeReward, isHelpingOthers } from '../lib/scoring';
+import { categoryLabel, t } from '../lib/i18n';
+import { factSubjects, randomFact } from '../data/facts';
 
 interface Props {
   childId: string;
@@ -11,32 +13,24 @@ interface Props {
 
 export function TaskDetailModal({ childId, challenge, onClose }: Props) {
   const { state, dispatch } = useStore();
+  const lang = state.language;
   const reward = computeReward(state.scoringConfig, challenge.difficulty, challenge.category);
-  const [feedback, setFeedback] = useState<'right' | 'wrong' | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [note, setNote] = useState('');
+  const helpingOthers = isHelpingOthers(challenge.category);
 
-  useEffect(() => {
-    if (feedback === 'right') {
-      const t = setTimeout(onClose, 900);
-      return () => clearTimeout(t);
-    }
-  }, [feedback, onClose]);
-
-  function handleChoice(index: number) {
-    if (feedback === 'right') return;
-    const correct = index === challenge.quiz?.correctIndex;
-    dispatch({ type: 'COMPLETE_QUIZ', childId, challengeId: challenge.id, correct });
-    setFeedback(correct ? 'right' : 'wrong');
-  }
-
-  function handleMarkComplete() {
-    dispatch({ type: 'COMPLETE_TASK', childId, challengeId: challenge.id });
+  function handleMarkComplete(noteText?: string) {
+    dispatch({ type: 'COMPLETE_TASK', childId, challengeId: challenge.id, note: noteText });
     if (challenge.requiresApproval) {
       setSubmitted(true);
       setTimeout(onClose, 1300);
     } else {
       onClose();
     }
+  }
+
+  function handleQuizFinish(correctCount: number, totalQuestions: number) {
+    dispatch({ type: 'COMPLETE_QUIZ', childId, challengeId: challenge.id, correctCount, totalQuestions });
   }
 
   return (
@@ -46,7 +40,7 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
           ×
         </button>
         <span className="quest-tag" style={{ background: CATEGORY_COLOR[challenge.category] }}>
-          {CATEGORY_LABEL[challenge.category].toUpperCase()}
+          {categoryLabel(lang, challenge.category).toUpperCase()}
         </span>
         <div className="modal-title">{challenge.title}</div>
         <div className="modal-desc">{challenge.description}</div>
@@ -55,19 +49,36 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
           <div className="reward-preview">⭐ +{reward.stars} · ⚡ +{reward.xp} XP — {reward.bonusPct}% helping-others bonus!</div>
         )}
 
-        {challenge.kind === 'quiz' && challenge.quiz && (
-          <QuizBody quiz={challenge.quiz} onChoice={handleChoice} feedback={feedback} reward={reward} />
+        {challenge.kind === 'quiz' && challenge.quiz && challenge.quiz.length > 0 && (
+          <QuizBody questions={challenge.quiz} reward={reward} lang={lang} onFinish={handleQuizFinish} onAllDone={onClose} />
         )}
 
-        {challenge.kind === 'draw' && <DrawBody onDone={handleMarkComplete} />}
+        {challenge.kind === 'draw' && <DrawBody onDone={() => handleMarkComplete()} lang={lang} />}
+
+        {challenge.kind === 'discovery' && <DiscoveryBody onDone={(noteText) => handleMarkComplete(noteText)} lang={lang} />}
 
         {challenge.kind === 'selfreport' &&
           (submitted ? (
-            <div className="feedback-msg right">Submitted — waiting for approval!</div>
+            <div className="feedback-msg right">{t(lang, 'submitWaitingApproval')}</div>
           ) : (
-            <button className="btn btn-primary" onClick={handleMarkComplete}>
-              Mark Complete · +{reward.stars} ⭐
-            </button>
+            <div>
+              {helpingOthers && (
+                <textarea
+                  className="form-textarea"
+                  style={{ marginBottom: 10 }}
+                  placeholder={t(lang, 'whatDidYouDo')}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              )}
+              <button
+                className="btn btn-primary"
+                disabled={helpingOthers && !note.trim()}
+                onClick={() => handleMarkComplete(helpingOthers ? note.trim() : undefined)}
+              >
+                {t(lang, 'markComplete')} · +{reward.stars} ⭐
+              </button>
+            </div>
           ))}
       </div>
     </div>
@@ -75,33 +86,145 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
 }
 
 function QuizBody({
-  quiz,
-  onChoice,
-  feedback,
+  questions,
   reward,
+  lang,
+  onFinish,
+  onAllDone,
 }: {
-  quiz: NonNullable<Challenge['quiz']>;
-  onChoice: (index: number) => void;
-  feedback: 'right' | 'wrong' | null;
-  reward: { stars: number };
+  questions: QuizQuestion[];
+  reward: { stars: number; xp: number };
+  lang: Parameters<typeof t>[0];
+  onFinish: (correctCount: number, totalQuestions: number) => void;
+  onAllDone: () => void;
 }) {
+  const [index, setIndex] = useState(0);
+  const [feedback, setFeedback] = useState<'right' | 'wrong' | null>(null);
+  const [attemptedWrong, setAttemptedWrong] = useState<boolean[]>(() => Array(questions.length).fill(false));
+  const [correctFlags, setCorrectFlags] = useState<boolean[]>(() => Array(questions.length).fill(false));
+  const [finished, setFinished] = useState(false);
+  const question = questions[index];
+
+  useEffect(() => {
+    if (feedback !== 'right') return;
+    const delay = question.exampleSentence ? 2200 : 900;
+    const timer = setTimeout(() => {
+      if (index + 1 < questions.length) {
+        setIndex((i) => i + 1);
+        setFeedback(null);
+      } else {
+        setFinished(true);
+      }
+    }, delay);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feedback]);
+
+  useEffect(() => {
+    if (!finished) return;
+    const correctCount = correctFlags.filter(Boolean).length;
+    onFinish(correctCount, questions.length);
+    const timer = setTimeout(onAllDone, 1600);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finished]);
+
+  function handleChoice(choiceIndex: number) {
+    if (feedback === 'right') return;
+    const isCorrect = choiceIndex === question.correctIndex;
+    if (isCorrect) {
+      const firstTry = !attemptedWrong[index];
+      setCorrectFlags((prev) => {
+        const next = [...prev];
+        next[index] = firstTry;
+        return next;
+      });
+      setFeedback('right');
+    } else {
+      setAttemptedWrong((prev) => {
+        const next = [...prev];
+        next[index] = true;
+        return next;
+      });
+      setFeedback('wrong');
+    }
+  }
+
+  if (finished) {
+    const correctCount = correctFlags.filter(Boolean).length;
+    return (
+      <div>
+        <div className="modal-desc" style={{ fontWeight: 800, color: 'var(--text-heading)' }}>
+          🎉 {correctCount} / {questions.length} correct
+        </div>
+        <div className="feedback-msg right">
+          +{reward.stars} ⭐ · +{reward.xp} XP
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <div className="modal-desc" style={{ fontWeight: 800, color: 'var(--text-heading)' }}>
-        {quiz.question}
+      <div className="quest-reward" style={{ marginBottom: 6 }}>
+        {t(lang, 'questionOf')} {index + 1} {t(lang, 'of')} {questions.length}
       </div>
-      {quiz.choices.map((choice, i) => (
-        <button key={i} className="choice-btn" onClick={() => onChoice(i)}>
+      <div className="modal-desc" style={{ fontWeight: 800, color: 'var(--text-heading)' }}>
+        {question.question}
+      </div>
+      {question.choices.map((choice, i) => (
+        <button key={i} className="choice-btn" onClick={() => handleChoice(i)} disabled={feedback === 'right'}>
           {choice}
         </button>
       ))}
-      {feedback === 'right' && <div className="feedback-msg right">Correct! +{reward.stars} ⭐</div>}
-      {feedback === 'wrong' && <div className="feedback-msg wrong">Not quite — try again!</div>}
+      {feedback === 'right' && (
+        <>
+          <div className="feedback-msg right">{t(lang, 'correct')}</div>
+          {question.exampleSentence && (
+            <div className="reward-preview" style={{ marginTop: 8 }}>
+              {t(lang, 'example')}: {question.exampleSentence}
+            </div>
+          )}
+        </>
+      )}
+      {feedback === 'wrong' && <div className="feedback-msg wrong">{t(lang, 'notQuite')}</div>}
     </div>
   );
 }
 
-function DrawBody({ onDone }: { onDone: () => void }) {
+function DiscoveryBody({ onDone, lang }: { onDone: (note: string) => void; lang: Parameters<typeof t>[0] }) {
+  const [picked, setPicked] = useState<{ subjectLabel: string; fact: string } | null>(null);
+
+  if (picked) {
+    return (
+      <div>
+        <div className="modal-desc" style={{ fontWeight: 700, color: 'var(--text-heading)', lineHeight: 1.6 }}>
+          {picked.fact}
+        </div>
+        <button className="btn btn-primary" onClick={() => onDone(`${picked.subjectLabel}: ${picked.fact}`)}>
+          {t(lang, 'gotIt')}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="quest-reward" style={{ marginBottom: 8 }}>
+        {t(lang, 'chooseSubject')}
+      </div>
+      <div className="chip-row">
+        {factSubjects.map((s) => (
+          <button key={s.id} type="button" className="chip" onClick={() => setPicked(randomFact(s.id))}>
+            {s.emoji} {s.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DrawBody({ onDone, lang }: { onDone: () => void; lang: Parameters<typeof t>[0] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
 
@@ -157,10 +280,10 @@ function DrawBody({ onDone }: { onDone: () => void }) {
       />
       <div className="btn-row">
         <button className="btn btn-secondary" onClick={handleClear}>
-          Clear
+          {t(lang, 'clear')}
         </button>
         <button className="btn btn-primary" onClick={onDone}>
-          I'm done!
+          {t(lang, 'imDone')}
         </button>
       </div>
     </div>

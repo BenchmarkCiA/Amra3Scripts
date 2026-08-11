@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../state/store';
 import { StarField } from '../components/StarField';
+import { t } from '../lib/i18n';
 
 interface Props {
   onUnlock: () => void;
@@ -9,6 +10,7 @@ interface Props {
 
 export function ParentGate({ onUnlock, onBack }: Props) {
   const { state } = useStore();
+  const lang = state.language;
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
 
@@ -26,8 +28,8 @@ export function ParentGate({ onUnlock, onBack }: Props) {
       <div className="app-frame">
         <StarField />
         <div className="pin-shell" style={{ position: 'relative', zIndex: 1 }}>
-          <div className="picker-title">Parent Mode</div>
-          <div className="picker-subtitle">Enter the parent PIN to manage challenges, rewards and approvals.</div>
+          <div className="picker-title">{t(lang, 'parentMode')}</div>
+          <div className="picker-subtitle">{t(lang, 'parentPinPrompt')}</div>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
             <input
               className="form-input pin-input"
@@ -40,13 +42,13 @@ export function ParentGate({ onUnlock, onBack }: Props) {
               }}
               autoFocus
             />
-            {error && <div className="feedback-msg wrong">Wrong PIN — try again.</div>}
+            {error && <div className="feedback-msg wrong">{t(lang, 'wrongPin')}</div>}
             <button className="btn btn-primary" type="submit" style={{ maxWidth: 200 }}>
-              Unlock
+              {t(lang, 'unlock')}
             </button>
           </form>
           <button className="parent-link" onClick={onBack}>
-            ← Back
+            ← {t(lang, 'back')}
           </button>
           <div className="empty-state" style={{ padding: 0, marginTop: 8 }}>Default PIN: 1234 (change it in Settings)</div>
         </div>

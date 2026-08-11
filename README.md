@@ -83,35 +83,62 @@ it's almost certainly in `src/lib/supabaseSync.ts` or `supabaseClient.ts`.
 ## What's implemented
 
 - Kid app: profile picker, Home (mascot + next-reward progress + today's quests),
-  Quests (full list), task detail modal (quiz/draw/self-report), Reward Shop, and
-  Streaks & Badges — following the Jahnoon design's per-kid theming (Mia/pink dragon,
-  Sam/teal owl, Alex/indigo icon badges), fonts, and dark cosmic backgrounds.
-- Parent app: dashboard with per-child daily summary and a pending-approvals /
-  pending-redemptions queue, challenge creation & management, reward shop management,
-  and a settings screen for the scoring table, kindness bonus %, streak rules, and PIN.
+  Quests (full list), task detail modal (quiz/draw/self-report/discovery), Reward Shop,
+  and Streaks & Badges — following the Jahnoon design's per-kid theming (Mia/pink
+  dragon, Sam/teal owl, Alex/indigo icon badges), fonts, and dark cosmic backgrounds.
+- Parent app: dashboard with per-child daily summary (including what each kid wrote
+  on helping-others/discovery tasks) and a pending-approvals / pending-redemptions
+  queue, challenge creation & management, reward shop management (add/**edit**/
+  disable/delete), and a settings screen for the scoring table, kindness bonus %,
+  streak rules, PIN, kids' names, and app language.
 - Scoring engine matching PRD §12: Stars/XP scale with a 1–5 difficulty rating,
   fully parent-configurable, with the helping-others bonus layered on top.
+- Multi-question quizzes (PRD §13/§14): Math/English challenges are 10-question
+  rounds with per-question retry, a running "Question X of N" counter, and a final
+  score screen — English questions show an example sentence using the word after a
+  correct answer. Score (first-try accuracy) is stored per completion for parent
+  analytics (`ChallengeCompletion.score`).
+- Discovery / fun facts (PRD §8 "Discover Something New"): kids pick a subject
+  (space, sports, science, animals, nature, history — `src/data/facts.ts`) and get a
+  medium-length fact; what they learned is saved to the completion note so a parent
+  can see it and start a conversation about it (PRD §25).
+- Helping-others "what did you do?" notes: kindness/sibling/family self-report
+  challenges require a short text answer before marking complete, visible to the
+  parent on the dashboard (PRD §34 trust-based verification).
+- Editable kid profiles: a parent can rename any kid from Settings.
+- Hebrew + RTL (PRD §7): a language toggle in Settings switches the UI chrome to
+  Hebrew and flips the whole layout to right-to-left (`document.dir`, logical CSS
+  properties throughout). Seed challenge/quiz/fact *content* stays English-authored
+  for now — see "Deliberately deferred" below.
 - Streaks with monthly freeze tokens (PRD §21) so one missed day doesn't reset
   progress to zero.
 - Badges/achievements with per-category and cumulative thresholds (PRD §22).
 - Manual-approval flow with a parent queue for chores/kindness (PRD §30).
 - Basic PWA manifest (installable; no offline service worker yet).
 - Supabase persistence (PRD §37 §38): schema + RLS applied, write-through sync from
-  every reducer action, with a localStorage fallback when unconfigured.
+  every reducer action, with a localStorage fallback when unconfigured. Every schema
+  change so far has shipped as an *additive* migration (new columns/rows only) so
+  stars, XP, and history survive app updates — see `apply_migration` calls referenced
+  in commit history rather than any destructive `DROP`/table rebuild.
 
 ## Deliberately deferred (see PRD §39's own "don't build everything at once")
 
 These are called out in the PRD itself as v1.5/v2/v3 scope, or need infrastructure
-decisions (Claude API keys, real auth) that weren't part of this pass:
+decisions (Claude API keys, real auth) or a larger content-authoring effort that
+weren't part of this pass:
 
 - **Real authentication** — see the security note above; Supabase Auth (PRD §37)
   is the natural next step once this needs to leave a private network.
 - **Claude API-generated challenges + moderation queue** (PRD §32/§33) — the
   `content_moderation_queue`-shaped review step isn't built, and no AI generation
   is wired up yet.
+- **Hebrew content translation** — the language toggle covers UI chrome (buttons,
+  nav, labels, category names); challenge titles/descriptions, the 40 quiz questions,
+  and the fun-fact library are still English-only. Translating educational content
+  accurately (especially spelling/grammar questions, which are English-specific by
+  nature) is a separate effort from RTL/layout support.
 - Non-Reader Mode audio/icon-only presentation for Mia (PRD §6) — the age-appropriate
   seed content is there, but there's no text-to-speech or icon-only input yet.
-- Hebrew/RTL localization (PRD §7).
 - Adaptive difficulty (PRD §31) — difficulty is currently parent-set per challenge.
 - Digital Shop / cosmetics (PRD §18) and Level-up celebration moments (PRD §17) — XP
   and an age-normalized level curve are tracked (`src/lib/scoring.ts`) but not yet
@@ -119,6 +146,10 @@ decisions (Claude API keys, real auth) that weren't part of this pass:
 - Notifications (PRD §35).
 - Photo evidence upload for approval-required challenges (PRD §30) — approval works,
   but without photo attachment.
+- Multi-question quiz *authoring* in Parent → Add Challenge — parent-created quizzes
+  are still single-question; only the system-seeded Math/English quizzes got the
+  10-question treatment. Building a multi-question form builder is a bigger UI task
+  than this pass covered.
 
 ## Project structure
 
@@ -126,13 +157,16 @@ decisions (Claude API keys, real auth) that weren't part of this pass:
 src/
   types.ts             PRD §38-aligned data model
   lib/scoring.ts        difficulty->Stars/XP table + helping-others bonus (the core ask)
+  lib/i18n.ts            UI string dictionary (en/he) + isRTL()
   lib/streak.ts, badges.ts, selectors.ts
   lib/supabaseClient.ts Supabase client + isSupabaseConfigured flag
   lib/supabaseSync.ts   row<->app-model mapping, initial hydrate, write-through sync
   data/defaults.ts      local-only fallback seed (kids/challenges/rewards/badges)
+  data/facts.ts          fun-fact library for the Discovery challenge kind
   state/store.tsx        React context + reducer; Supabase when configured, else
                         localStorage
   components/           shared UI (StarField, TopBar, TabBar, Mascot)
-  screens/              kid-facing screens
+  screens/              kid-facing screens (TaskDetailModal has the quiz/discovery/
+                        selfreport-note interaction logic)
   parent/               parent mode (gate, dashboard, challenge form, settings, ...)
 ```

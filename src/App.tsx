@@ -1,16 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StoreProvider, useStore } from './state/store';
 import { ProfilePicker } from './screens/ProfilePicker';
 import { KidApp } from './screens/KidApp';
 import { ParentGate } from './parent/ParentGate';
 import { ParentApp } from './parent/ParentApp';
 import { StarField } from './components/StarField';
+import { isRTL } from './lib/i18n';
 
 type View = { mode: 'picker' } | { mode: 'kid'; childId: string } | { mode: 'parent-gate' } | { mode: 'parent' };
 
 function AppShell() {
-  const { loading } = useStore();
+  const { state, loading } = useStore();
   const [view, setView] = useState<View>({ mode: 'picker' });
+
+  useEffect(() => {
+    document.documentElement.lang = state.language;
+    document.documentElement.dir = isRTL(state.language) ? 'rtl' : 'ltr';
+  }, [state.language]);
 
   if (loading) {
     return (

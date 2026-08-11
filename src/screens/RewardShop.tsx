@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Child } from '../types';
 import { useStore } from '../state/store';
+import { t } from '../lib/i18n';
 
 interface Props {
   child: Child;
@@ -8,11 +9,12 @@ interface Props {
 
 export function RewardShop({ child }: Props) {
   const { state, dispatch } = useStore();
+  const lang = state.language;
   const [toast, setToast] = useState<string | null>(null);
 
   function handleRedeem(rewardId: string, name: string) {
     dispatch({ type: 'REDEEM_REWARD', childId: child.id, rewardId });
-    setToast(`Redeemed: ${name}! Waiting for parent approval.`);
+    setToast(`${t(lang, 'redeem')}: ${name}! ${t(lang, 'redeemedWaiting')}`);
     setTimeout(() => setToast(null), 2200);
   }
 
@@ -20,8 +22,10 @@ export function RewardShop({ child }: Props) {
 
   return (
     <>
-      <div className="screen-header">Reward Shop</div>
-      <div className="screen-subheader">You have {child.stars} ⭐ stars</div>
+      <div className="screen-header">{t(lang, 'rewardShop')}</div>
+      <div className="screen-subheader">
+        {t(lang, 'youHave')} {child.stars} ⭐ {t(lang, 'stars')}
+      </div>
 
       {rewards.map((reward) => {
         const affordable = child.stars >= reward.cost;
@@ -29,19 +33,21 @@ export function RewardShop({ child }: Props) {
           <div key={reward.id} className="reward-card">
             <div>
               <div className="reward-name">{reward.name}</div>
-              <div className="reward-cost">{reward.cost} stars</div>
+              <div className="reward-cost">
+                {reward.cost} {t(lang, 'stars')}
+              </div>
             </div>
             <button
               className={`redeem-btn ${affordable ? 'active' : 'disabled'}`}
               disabled={!affordable}
               onClick={() => handleRedeem(reward.id, reward.name)}
             >
-              Redeem
+              {t(lang, 'redeem')}
             </button>
           </div>
         );
       })}
-      {rewards.length === 0 && <div className="empty-state">No rewards yet — ask a parent to add some!</div>}
+      {rewards.length === 0 && <div className="empty-state">{t(lang, 'noRewardsYet')}</div>}
 
       {toast && <div className="toast">{toast}</div>}
     </>

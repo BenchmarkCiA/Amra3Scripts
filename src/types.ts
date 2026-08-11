@@ -11,16 +11,19 @@ export type Category =
   | 'family'
   | 'creative';
 
-export type ChallengeKind = 'quiz' | 'draw' | 'selfreport';
+export type ChallengeKind = 'quiz' | 'draw' | 'selfreport' | 'discovery';
 
 export type Difficulty = 1 | 2 | 3 | 4 | 5;
 
 export type Recurrence = 'once' | 'daily' | 'weekly';
 
-export interface QuizContent {
+export type Language = 'en' | 'he';
+
+export interface QuizQuestion {
   question: string;
   choices: string[];
   correctIndex: number;
+  exampleSentence?: string; // English quizzes: a sentence using the correct word
 }
 
 export interface Challenge {
@@ -34,7 +37,7 @@ export interface Challenge {
   recurrence: Recurrence;
   assignedTo: string[]; // child ids
   createdBy: 'system' | 'parent';
-  quiz?: QuizContent;
+  quiz?: QuizQuestion[]; // for kind: 'quiz'
   dueDate?: string; // ISO date, for 'once' challenges
   weekday?: number; // 0-6, for 'weekly' challenges
   active: boolean;
@@ -57,6 +60,7 @@ export interface ChallengeCompletion {
   starsEarned: number;
   xpEarned: number;
   score?: { correct: number; total: number };
+  note?: string; // what-I-did text (helping-others) or the discovery fact learned
   completedAt?: string;
   resolvedAt?: string;
 }

@@ -5,15 +5,17 @@ import { ParentChallengeForm } from './ParentChallengeForm';
 import { ParentChallengeList } from './ParentChallengeList';
 import { ParentRewardsManager } from './ParentRewardsManager';
 import { ParentSettings } from './ParentSettings';
+import { useStore } from '../state/store';
+import { t } from '../lib/i18n';
 
 type ParentScreen = 'dashboard' | 'new-challenge' | 'challenges' | 'rewards' | 'settings';
 
-const TABS: { key: ParentScreen; label: string }[] = [
-  { key: 'dashboard', label: 'Dashboard' },
-  { key: 'new-challenge', label: '+ Add Challenge' },
-  { key: 'challenges', label: 'All Challenges' },
-  { key: 'rewards', label: 'Rewards' },
-  { key: 'settings', label: 'Settings' },
+const TAB_KEYS = [
+  { key: 'dashboard' as const, labelKey: 'dashboard' as const },
+  { key: 'new-challenge' as const, labelKey: 'addChallenge' as const },
+  { key: 'challenges' as const, labelKey: 'allChallenges' as const },
+  { key: 'rewards' as const, labelKey: 'rewards' as const },
+  { key: 'settings' as const, labelKey: 'settings' as const },
 ];
 
 interface Props {
@@ -21,6 +23,8 @@ interface Props {
 }
 
 export function ParentApp({ onBack }: Props) {
+  const { state } = useStore();
+  const lang = state.language;
   const [screen, setScreen] = useState<ParentScreen>('dashboard');
 
   return (
@@ -29,23 +33,23 @@ export function ParentApp({ onBack }: Props) {
         <StarField />
         <div style={{ position: 'relative', zIndex: 1 }}>
           <button className="back-btn" style={{ marginInlineStart: 20, marginTop: 12 }} onClick={onBack}>
-            ← Exit parent mode
+            ← {t(lang, 'exitParentMode')}
           </button>
         </div>
         <div className="top-bar" style={{ paddingBottom: 0 }}>
           <div className="logo-badge-group">
             <div className="logo-badge" />
-            <div className="app-name">Parent Mode</div>
+            <div className="app-name">{t(lang, 'parentMode')}</div>
           </div>
         </div>
         <div className="parent-nav">
-          {TABS.map((tab) => (
+          {TAB_KEYS.map((tab) => (
             <button
               key={tab.key}
               className={`parent-tab${screen === tab.key ? ' active' : ''}`}
               onClick={() => setScreen(tab.key)}
             >
-              {tab.label}
+              {t(lang, tab.labelKey)}
             </button>
           ))}
         </div>

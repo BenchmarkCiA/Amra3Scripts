@@ -1,5 +1,6 @@
 import { useStore } from '../state/store';
 import { StarField } from '../components/StarField';
+import { t } from '../lib/i18n';
 
 interface Props {
   onPickChild: (childId: string) => void;
@@ -8,14 +9,15 @@ interface Props {
 
 export function ProfilePicker({ onPickChild, onParent }: Props) {
   const { state } = useStore();
+  const lang = state.language;
 
   return (
     <div className="app-shell theme-parent">
       <div className="app-frame">
         <StarField />
         <div className="picker-shell">
-          <div className="picker-title">Family Quest</div>
-          <div className="picker-subtitle">Whose turn is it? Tap your name to start today's quests.</div>
+          <div className="picker-title">{t(lang, 'appName')}</div>
+          <div className="picker-subtitle">{t(lang, 'whoseTurn')}</div>
           {state.children.map((child) => (
             <button key={child.id} className="picker-card" onClick={() => onPickChild(child.id)}>
               <div className="avatar-circle" style={{ background: child.accentColor }}>
@@ -23,12 +25,14 @@ export function ProfilePicker({ onPickChild, onParent }: Props) {
               </div>
               <div>
                 <div className="picker-name">{child.name}</div>
-                <div className="picker-age">Age {child.age}</div>
+                <div className="picker-age">
+                  {t(lang, 'age')} {child.age}
+                </div>
               </div>
             </button>
           ))}
           <button className="parent-link" onClick={onParent}>
-            Parent mode
+            {t(lang, 'parentMode')}
           </button>
         </div>
       </div>

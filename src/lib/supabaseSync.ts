@@ -63,6 +63,7 @@ function mapCompletion(row: any): ChallengeCompletion {
     starsEarned: row.stars_earned,
     xpEarned: row.xp_earned,
     score: row.score ?? undefined,
+    note: row.note ?? undefined,
     completedAt: row.completed_at ?? undefined,
     resolvedAt: row.resolved_at ?? undefined,
   };
@@ -141,6 +142,7 @@ export async function fetchAppState(): Promise<AppState | null> {
     streaks: streakMap,
     scoringConfig: scoringConfig.data ? mapScoringConfig(scoringConfig.data) : ({} as ScoringConfig),
     parentPin: appSettings.data?.parent_pin ?? '1234',
+    language: appSettings.data?.language ?? 'en',
   };
 }
 
@@ -211,7 +213,6 @@ export async function syncActionToSupabase(action: Action, prevState: AppState):
 
   switch (action.type) {
     case 'COMPLETE_QUIZ': {
-      if (!action.correct) return; // wrong answer is a pure local retry, nothing to persist
       const challenge = prevState.challenges.find((c) => c.id === action.challengeId);
       if (!challenge) return;
       const date = todayISO();
@@ -224,6 +225,7 @@ export async function syncActionToSupabase(action: Action, prevState: AppState):
         status: 'completed',
         stars_earned: reward.stars,
         xp_earned: reward.xp,
+        score: { correct: action.correctCount, total: action.totalQuestions },
         completed_at: new Date().toISOString(),
       });
       if (error) throw error;
@@ -245,6 +247,7 @@ export async function syncActionToSupabase(action: Action, prevState: AppState):
         status,
         stars_earned: reward.stars,
         xp_earned: reward.xp,
+        note: action.note ?? null,
         completed_at: new Date().toISOString(),
       });
       if (error) throw error;
@@ -357,6 +360,16 @@ export async function syncActionToSupabase(action: Action, prevState: AppState):
     }
     case 'SET_PARENT_PIN': {
       const { error } = await db.from('app_settings').update({ parent_pin: action.pin }).eq('id', 1);
+      if (error) throw error;
+      return;
+    }
+    case 'SET_LANGUAGE': {
+      const { error } = await db.from('app_settings').update({ language: action.language }).eq('id', 1);
+      if (error) throw error;
+      return;
+    }
+    case 'UPDATE_CHILD_NAME': {
+      const { error } = await db.from('children').update({ name: action.name }).eq('id', action.childId);
       if (error) throw error;
       return;
     }

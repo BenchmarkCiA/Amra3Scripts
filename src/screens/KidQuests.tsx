@@ -1,7 +1,8 @@
 import type { Child } from '../types';
 import { useStore } from '../state/store';
 import { getTodayItemsForChild, isDone } from '../lib/selectors';
-import { CATEGORY_COLOR, CATEGORY_LABEL, computeReward } from '../lib/scoring';
+import { CATEGORY_COLOR, computeReward } from '../lib/scoring';
+import { categoryLabel, t } from '../lib/i18n';
 import { todayISO } from '../lib/id';
 
 interface Props {
@@ -11,14 +12,15 @@ interface Props {
 
 export function KidQuests({ child, onOpenTask }: Props) {
   const { state } = useStore();
+  const lang = state.language;
   const items = getTodayItemsForChild(state, child.id, todayISO());
   const doneCount = items.filter((i) => isDone(i.completion)).length;
 
   return (
     <>
-      <div className="screen-header">Your Quests</div>
+      <div className="screen-header">{t(lang, 'yourQuests')}</div>
       <div className="screen-subheader">
-        {doneCount} of {items.length} done today
+        {doneCount} {t(lang, 'of')} {items.length} {t(lang, 'doneToday')}
       </div>
 
       <div className="quest-list">
@@ -33,13 +35,13 @@ export function KidQuests({ child, onOpenTask }: Props) {
               disabled={done}
             >
               <span className="quest-tag" style={{ background: CATEGORY_COLOR[challenge.category] }}>
-                {CATEGORY_LABEL[challenge.category].toUpperCase()}
+                {categoryLabel(lang, challenge.category).toUpperCase()}
               </span>
               <div className="quest-info">
                 <div className="quest-title">{challenge.title}</div>
                 <div className="quest-reward">
                   {completion?.status === 'awaiting_approval'
-                    ? 'Waiting for approval'
+                    ? t(lang, 'waitingApproval')
                     : `+${reward.stars} ⭐ +${reward.xp} XP`}
                 </div>
               </div>
@@ -48,7 +50,7 @@ export function KidQuests({ child, onOpenTask }: Props) {
             </button>
           );
         })}
-        {items.length === 0 && <div className="empty-state">No quests assigned yet — check back soon!</div>}
+        {items.length === 0 && <div className="empty-state">{t(lang, 'noQuestsYet')}</div>}
       </div>
     </>
   );
