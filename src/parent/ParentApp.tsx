@@ -5,16 +5,18 @@ import { ParentChallengeForm } from './ParentChallengeForm';
 import { ParentChallengeList } from './ParentChallengeList';
 import { ParentRewardsManager } from './ParentRewardsManager';
 import { ParentSettings } from './ParentSettings';
+import { ParentStats } from './ParentStats';
 import { useStore } from '../state/store';
 import { t } from '../lib/i18n';
 
-type ParentScreen = 'dashboard' | 'new-challenge' | 'challenges' | 'rewards' | 'settings';
+type ParentScreen = 'dashboard' | 'new-challenge' | 'challenges' | 'rewards' | 'stats' | 'settings';
 
 const TAB_KEYS = [
   { key: 'dashboard' as const, labelKey: 'dashboard' as const },
   { key: 'new-challenge' as const, labelKey: 'addChallenge' as const },
   { key: 'challenges' as const, labelKey: 'allChallenges' as const },
   { key: 'rewards' as const, labelKey: 'rewards' as const },
+  { key: 'stats' as const, labelKey: 'stats' as const },
   { key: 'settings' as const, labelKey: 'settings' as const },
 ];
 
@@ -58,6 +60,7 @@ export function ParentApp({ onBack }: Props) {
           {screen === 'new-challenge' && <ParentChallengeForm onCreated={() => setScreen('challenges')} />}
           {screen === 'challenges' && <ParentChallengeList />}
           {screen === 'rewards' && <ParentRewardsManager />}
+          {screen === 'stats' && <ParentStats />}
           {screen === 'settings' && <ParentSettings />}
         </div>
       </div>

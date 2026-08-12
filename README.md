@@ -116,14 +116,31 @@ it's almost certainly in `src/lib/supabaseSync.ts` or `supabaseClient.ts`.
   trail), and a per-challenge "Reset" button that reverses any Stars/XP already
   awarded for that completion and makes the quest available again the same day —
   useful for redoing a quiz or undoing a mistaken approval.
+- Monthly Stats (Parent → Stats, PRD §26 Parent Analytics): pick any month a child
+  has activity in and see total challenges completed, Stars/XP earned, quizzes taken
+  with average first-try accuracy, and a per-category breakdown — answers "how many
+  quizzes/challenges did they do this month."
 - **How daily challenges refresh**: `recurrence: 'daily'` challenges are scheduled
   every single day automatically — there's no "roll over to tomorrow" step to run.
   A kid's "done" status for a challenge is keyed to *today's date*, so the moment the
   calendar date changes, all daily challenges reappear as not-done with no admin
-  action needed. What does **not** currently happen automatically: the quiz
-  *content* itself doesn't rotate — the same 10 Math/English questions repeat every
-  day (see "Deliberately deferred" below for what a content-rotation system would
-  need).
+  action needed.
+- **Quiz content now rotates day-to-day.** Each Math/English quiz's question bank
+  was expanded from a fixed 10 to a pool of 30 (`src/data/defaults.ts`), and each
+  day a *different* 10-question subset is drawn from that pool
+  (`src/lib/dailyQuiz.ts`): a small seeded shuffle keyed on
+  `(challengeId, today's date)`, so it's stable all day (same 10 questions if the
+  child reopens it), different tomorrow, and requires no server/cron job — every
+  device computes the same result independently from the date alone. Honest math on
+  what "30" buys you: with 30 questions and 10 shown per day, a child doing the quiz
+  every single day will start seeing repeats after about 3 days, just in a different
+  order/combination each time — it is *not* 30 fully-distinct days of content. Getting
+  to genuinely 30 unique days would need ~300 authored questions per subject per kid
+  (10/day × 30 days), which is a much larger content-authoring effort; this pass
+  aimed for "meaningfully varies day to day" rather than "never repeats for a month."
+  Expanding any pool further (or refreshing it with new questions periodically) is
+  just appending more entries to the array — see "Deliberately deferred" below for
+  what it would take to make that recur automatically without asking again each month.
 - Editable kid profiles: a parent can rename any kid from Settings.
 - Hebrew + RTL (PRD §7): a language toggle in Settings switches the UI chrome to
   Hebrew and flips the whole layout to right-to-left (`document.dir`, logical CSS
@@ -169,12 +186,16 @@ weren't part of this pass:
   are still single-question; only the system-seeded Math/English quizzes got the
   10-question treatment. Building a multi-question form builder is a bigger UI task
   than this pass covered.
-- Quiz content rotation — daily challenges *reschedule* automatically (see above)
-  but always serve the same fixed 10 questions per subject rather than picking a
-  fresh subset from a larger bank or generating new ones. A real rotation system
-  would need either a much larger authored question bank per subject/difficulty
-  (with server-side random selection so it's stable across a device's session) or
-  the AI-generation pipeline above, gated the same way.
+- **Automated monthly content refresh** — the 30-question pools rotate daily (see
+  above) but don't grow or refresh themselves; nothing currently adds a "next batch"
+  of questions on a schedule. Making that automatic needs one of: (a) a much bigger
+  hand-authored pool up front so rotation alone stays fresh for longer, (b) someone
+  asking for a fresh batch to be authored and appended periodically (the mechanism
+  supports this today — it's just appending entries to the arrays in
+  `src/data/defaults.ts` plus one additive Supabase migration, no architecture
+  change), or (c) the AI-generation pipeline above, which could generate and append
+  a new month's questions on a cron trigger, gated behind the same parent moderation
+  requirement as any other AI content.
 
 ## Project structure
 

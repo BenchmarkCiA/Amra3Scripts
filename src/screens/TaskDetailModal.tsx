@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Challenge, QuizAnswerDetail, QuizQuestion } from '../types';
 import { useStore } from '../state/store';
 import { CATEGORY_COLOR, computeReward, isHelpingOthers } from '../lib/scoring';
 import { categoryLabel, t } from '../lib/i18n';
 import { factSubjects, randomFact } from '../data/facts';
+import { getDailyQuestions } from '../lib/dailyQuiz';
+import { todayISO } from '../lib/id';
 
 interface Props {
   childId: string;
@@ -18,6 +20,12 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
   const [submitted, setSubmitted] = useState(false);
   const [note, setNote] = useState('');
   const helpingOthers = isHelpingOthers(challenge.category);
+  // A different 10-question subset of the challenge's full pool each day,
+  // stable for the whole day — see lib/dailyQuiz.ts.
+  const dailyQuestions = useMemo(
+    () => (challenge.quiz ? getDailyQuestions(challenge.quiz, `${challenge.id}-${todayISO()}`) : []),
+    [challenge.quiz, challenge.id],
+  );
 
   function handleMarkComplete(noteText?: string) {
     dispatch({ type: 'COMPLETE_TASK', childId, challengeId: challenge.id, note: noteText });
@@ -49,8 +57,8 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
           <div className="reward-preview">⭐ +{reward.stars} · ⚡ +{reward.xp} XP — {reward.bonusPct}% helping-others bonus!</div>
         )}
 
-        {challenge.kind === 'quiz' && challenge.quiz && challenge.quiz.length > 0 && (
-          <QuizBody questions={challenge.quiz} reward={reward} lang={lang} onFinish={handleQuizFinish} onAllDone={onClose} />
+        {challenge.kind === 'quiz' && dailyQuestions.length > 0 && (
+          <QuizBody questions={dailyQuestions} reward={reward} lang={lang} onFinish={handleQuizFinish} onAllDone={onClose} />
         )}
 
         {challenge.kind === 'draw' && <DrawBody onDone={() => handleMarkComplete()} lang={lang} />}

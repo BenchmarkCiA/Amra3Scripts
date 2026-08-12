@@ -60,6 +60,7 @@ const dict = {
     addChallenge: '+ Add Challenge',
     allChallenges: 'All Challenges',
     rewards: 'Rewards',
+    stats: 'Stats',
     settings: 'Settings',
   },
   he: {
@@ -114,6 +115,7 @@ const dict = {
     addChallenge: '+ הוספת משימה',
     allChallenges: 'כל המשימות',
     rewards: 'פרסים',
+    stats: 'סטטיסטיקה',
     settings: 'הגדרות',
   },
 } as const;
