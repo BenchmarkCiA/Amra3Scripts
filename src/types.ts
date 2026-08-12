@@ -51,6 +51,12 @@ export type CompletionStatus =
   | 'approved'
   | 'rejected';
 
+export interface QuizAnswerDetail {
+  question: string;
+  correctAnswer: string;
+  correct: boolean; // true if answered correctly on the first attempt
+}
+
 export interface ChallengeCompletion {
   id: string;
   challengeId: string;
@@ -59,7 +65,7 @@ export interface ChallengeCompletion {
   status: CompletionStatus;
   starsEarned: number;
   xpEarned: number;
-  score?: { correct: number; total: number };
+  score?: { correct: number; total: number; details?: QuizAnswerDetail[] };
   note?: string; // what-I-did text (helping-others) or the discovery fact learned
   completedAt?: string;
   resolvedAt?: string;

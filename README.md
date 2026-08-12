@@ -94,10 +94,16 @@ it's almost certainly in `src/lib/supabaseSync.ts` or `supabaseClient.ts`.
 - Scoring engine matching PRD §12: Stars/XP scale with a 1–5 difficulty rating,
   fully parent-configurable, with the helping-others bonus layered on top.
 - Multi-question quizzes (PRD §13/§14): Math/English challenges are 10-question
-  rounds with per-question retry, a running "Question X of N" counter, and a final
-  score screen — English questions show an example sentence using the word after a
-  correct answer. Score (first-try accuracy) is stored per completion for parent
-  analytics (`ChallengeCompletion.score`).
+  rounds with per-question retry and a running "Question X of N" counter. A question
+  only counts as correct if answered right on the *first* try (retries are free and
+  never punished, but the recorded score is a genuine accuracy number). English
+  questions show an example sentence using the word after a correct answer — the
+  child controls advancing to the next question with a "Next" button on those
+  (instead of auto-advancing) so there's time to actually read it; plain questions
+  still auto-advance quickly. Score + a full per-question right/wrong breakdown
+  (including the correct answer for anything missed) is stored per completion
+  (`ChallengeCompletion.score.details`) and is visible to the parent via a "See
+  answers" toggle on the Dashboard.
 - Discovery / fun facts (PRD §8 "Discover Something New"): kids pick a subject
   (space, sports, science, animals, nature, history — `src/data/facts.ts`) and get a
   medium-length fact; what they learned is saved to the completion note so a parent
@@ -105,6 +111,19 @@ it's almost certainly in `src/lib/supabaseSync.ts` or `supabaseClient.ts`.
 - Helping-others "what did you do?" notes: kindness/sibling/family self-report
   challenges require a short text answer before marking complete, visible to the
   parent on the dashboard (PRD §34 trust-based verification).
+- Parent Dashboard: manual Stars/XP adjustment for any child (positive or negative,
+  with an optional reason, fully logged as a normal transaction — PRD §15/§16 audit
+  trail), and a per-challenge "Reset" button that reverses any Stars/XP already
+  awarded for that completion and makes the quest available again the same day —
+  useful for redoing a quiz or undoing a mistaken approval.
+- **How daily challenges refresh**: `recurrence: 'daily'` challenges are scheduled
+  every single day automatically — there's no "roll over to tomorrow" step to run.
+  A kid's "done" status for a challenge is keyed to *today's date*, so the moment the
+  calendar date changes, all daily challenges reappear as not-done with no admin
+  action needed. What does **not** currently happen automatically: the quiz
+  *content* itself doesn't rotate — the same 10 Math/English questions repeat every
+  day (see "Deliberately deferred" below for what a content-rotation system would
+  need).
 - Editable kid profiles: a parent can rename any kid from Settings.
 - Hebrew + RTL (PRD §7): a language toggle in Settings switches the UI chrome to
   Hebrew and flips the whole layout to right-to-left (`document.dir`, logical CSS
@@ -150,6 +169,12 @@ weren't part of this pass:
   are still single-question; only the system-seeded Math/English quizzes got the
   10-question treatment. Building a multi-question form builder is a bigger UI task
   than this pass covered.
+- Quiz content rotation — daily challenges *reschedule* automatically (see above)
+  but always serve the same fixed 10 questions per subject rather than picking a
+  fresh subset from a larger bank or generating new ones. A real rotation system
+  would need either a much larger authored question bank per subject/difficulty
+  (with server-side random selection so it's stable across a device's session) or
+  the AI-generation pipeline above, gated the same way.
 
 ## Project structure
 

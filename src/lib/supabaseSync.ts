@@ -225,7 +225,7 @@ export async function syncActionToSupabase(action: Action, prevState: AppState):
         status: 'completed',
         stars_earned: reward.stars,
         xp_earned: reward.xp,
-        score: { correct: action.correctCount, total: action.totalQuestions },
+        score: { correct: action.correctCount, total: action.totalQuestions, details: action.details },
         completed_at: new Date().toISOString(),
       });
       if (error) throw error;
@@ -270,6 +270,25 @@ export async function syncActionToSupabase(action: Action, prevState: AppState):
         const challenge = prevState.challenges.find((c) => c.id === completion.challengeId);
         await creditChildRow(completion.childId, completion.starsEarned, completion.xpEarned, `Challenge: ${challenge?.title ?? ''}`, completion.challengeId, prevState);
         await bumpStreakRow(completion.childId, completion.date, prevState);
+      }
+      return;
+    }
+    case 'UNDO_COMPLETION': {
+      const completion = prevState.completions.find((c) => c.id === action.completionId);
+      if (!completion) return;
+      const wasCredited = completion.status === 'completed' || completion.status === 'approved';
+      const { error } = await db.from('challenge_completions').delete().eq('id', action.completionId);
+      if (error) throw error;
+      if (wasCredited) {
+        const challenge = prevState.challenges.find((c) => c.id === completion.challengeId);
+        await creditChildRow(
+          completion.childId,
+          -completion.starsEarned,
+          -completion.xpEarned,
+          `Undo: ${challenge?.title ?? ''}`,
+          completion.challengeId,
+          prevState,
+        );
       }
       return;
     }
@@ -374,10 +393,7 @@ export async function syncActionToSupabase(action: Action, prevState: AppState):
       return;
     }
     case 'ADJUST_STARS': {
-      const child = prevState.children.find((c) => c.id === action.childId);
-      if (!child) return;
-      await db.from('children').update({ stars: child.stars + action.amount }).eq('id', action.childId);
-      await db.from('star_transactions').insert({ child_id: action.childId, amount: action.amount, source: action.reason, reference_id: 'manual' });
+      await creditChildRow(action.childId, action.amount, action.xpAmount ?? 0, action.reason, 'manual', prevState);
       return;
     }
     case 'RESET_ALL':

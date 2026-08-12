@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Challenge, QuizQuestion } from '../types';
+import type { Challenge, QuizAnswerDetail, QuizQuestion } from '../types';
 import { useStore } from '../state/store';
 import { CATEGORY_COLOR, computeReward, isHelpingOthers } from '../lib/scoring';
 import { categoryLabel, t } from '../lib/i18n';
@@ -29,8 +29,8 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
     }
   }
 
-  function handleQuizFinish(correctCount: number, totalQuestions: number) {
-    dispatch({ type: 'COMPLETE_QUIZ', childId, challengeId: challenge.id, correctCount, totalQuestions });
+  function handleQuizFinish(correctCount: number, totalQuestions: number, details: QuizAnswerDetail[]) {
+    dispatch({ type: 'COMPLETE_QUIZ', childId, challengeId: challenge.id, correctCount, totalQuestions, details });
   }
 
   return (
@@ -95,7 +95,7 @@ function QuizBody({
   questions: QuizQuestion[];
   reward: { stars: number; xp: number };
   lang: Parameters<typeof t>[0];
-  onFinish: (correctCount: number, totalQuestions: number) => void;
+  onFinish: (correctCount: number, totalQuestions: number, details: QuizAnswerDetail[]) => void;
   onAllDone: () => void;
 }) {
   const [index, setIndex] = useState(0);
@@ -104,18 +104,22 @@ function QuizBody({
   const [correctFlags, setCorrectFlags] = useState<boolean[]>(() => Array(questions.length).fill(false));
   const [finished, setFinished] = useState(false);
   const question = questions[index];
+  // A "Next" button appears instead of auto-advancing whenever there's extra
+  // reading material (the example sentence) — kids need time to actually read it.
+  const waitsForNext = Boolean(question.exampleSentence);
+
+  function advance() {
+    if (index + 1 < questions.length) {
+      setIndex((i) => i + 1);
+      setFeedback(null);
+    } else {
+      setFinished(true);
+    }
+  }
 
   useEffect(() => {
-    if (feedback !== 'right') return;
-    const delay = question.exampleSentence ? 2200 : 900;
-    const timer = setTimeout(() => {
-      if (index + 1 < questions.length) {
-        setIndex((i) => i + 1);
-        setFeedback(null);
-      } else {
-        setFinished(true);
-      }
-    }, delay);
+    if (feedback !== 'right' || waitsForNext) return;
+    const timer = setTimeout(advance, 900);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feedback]);
@@ -123,7 +127,12 @@ function QuizBody({
   useEffect(() => {
     if (!finished) return;
     const correctCount = correctFlags.filter(Boolean).length;
-    onFinish(correctCount, questions.length);
+    const details: QuizAnswerDetail[] = questions.map((q, i) => ({
+      question: q.question,
+      correctAnswer: q.choices[q.correctIndex],
+      correct: correctFlags[i],
+    }));
+    onFinish(correctCount, questions.length, details);
     const timer = setTimeout(onAllDone, 1600);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -184,6 +193,11 @@ function QuizBody({
             <div className="reward-preview" style={{ marginTop: 8 }}>
               {t(lang, 'example')}: {question.exampleSentence}
             </div>
+          )}
+          {waitsForNext && (
+            <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={advance}>
+              {t(lang, 'next')}
+            </button>
           )}
         </>
       )}

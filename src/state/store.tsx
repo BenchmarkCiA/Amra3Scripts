@@ -4,6 +4,7 @@ import type {
   ChallengeCompletion,
   Child,
   Language,
+  QuizAnswerDetail,
   Reward,
   RewardRedemption,
   ScoringConfig,
@@ -67,9 +68,10 @@ function loadInitialState(): AppState {
 }
 
 export type Action =
-  | { type: 'COMPLETE_QUIZ'; childId: string; challengeId: string; correctCount: number; totalQuestions: number; completionId?: string }
+  | { type: 'COMPLETE_QUIZ'; childId: string; challengeId: string; correctCount: number; totalQuestions: number; details: QuizAnswerDetail[]; completionId?: string }
   | { type: 'COMPLETE_TASK'; childId: string; challengeId: string; note?: string; completionId?: string } // draw / selfreport / discovery
   | { type: 'RESOLVE_APPROVAL'; completionId: string; approve: boolean }
+  | { type: 'UNDO_COMPLETION'; completionId: string }
   | { type: 'REDEEM_REWARD'; childId: string; rewardId: string; redemptionId?: string }
   | { type: 'RESOLVE_REDEMPTION'; redemptionId: string; status: 'approved' | 'rejected' | 'delivered' }
   | { type: 'ADD_CHALLENGE'; challenge: Challenge }
@@ -83,7 +85,7 @@ export type Action =
   | { type: 'SET_PARENT_PIN'; pin: string }
   | { type: 'SET_LANGUAGE'; language: Language }
   | { type: 'UPDATE_CHILD_NAME'; childId: string; name: string }
-  | { type: 'ADJUST_STARS'; childId: string; amount: number; reason: string }
+  | { type: 'ADJUST_STARS'; childId: string; amount: number; xpAmount?: number; reason: string }
   | { type: 'RESET_ALL' }
   | { type: 'HYDRATE'; state: AppState };
 
@@ -129,7 +131,7 @@ function reducer(state: AppState, action: Action): AppState {
         status: 'completed',
         starsEarned: reward.stars,
         xpEarned: reward.xp,
-        score: { correct: action.correctCount, total: action.totalQuestions },
+        score: { correct: action.correctCount, total: action.totalQuestions, details: action.details },
         completedAt: new Date().toISOString(),
       };
       const credited = creditChild(state, action.childId, reward.stars, reward.xp, `Challenge: ${challenge.title}`, challenge.id);
@@ -195,6 +197,26 @@ function reducer(state: AppState, action: Action): AppState {
       next.streaks = maybeBumpStreak(next, completion.childId, completion.date);
       return next;
     }
+    case 'UNDO_COMPLETION': {
+      const completion = state.completions.find((c) => c.id === action.completionId);
+      if (!completion) return state;
+      const wasCredited = completion.status === 'completed' || completion.status === 'approved';
+      const completions = state.completions.filter((c) => c.id !== action.completionId);
+      if (!wasCredited) return { ...state, completions };
+      const challenge = state.challenges.find((c) => c.id === completion.challengeId);
+      const credited = creditChild(
+        state,
+        completion.childId,
+        -completion.starsEarned,
+        -completion.xpEarned,
+        `Undo: ${challenge?.title ?? ''}`,
+        completion.challengeId,
+      );
+      // Streak state is intentionally left as-is — reconstructing "was this the
+      // completion that pushed the day over the threshold" isn't tracked, so an
+      // undo doesn't attempt to roll the streak back.
+      return { ...state, ...credited, completions };
+    }
     case 'REDEEM_REWARD': {
       const reward = state.rewards.find((r) => r.id === action.rewardId);
       const child = state.children.find((c) => c.id === action.childId);
@@ -254,7 +276,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'UPDATE_CHILD_NAME':
       return { ...state, children: state.children.map((c) => (c.id === action.childId ? { ...c, name: action.name } : c)) };
     case 'ADJUST_STARS': {
-      const credited = creditChild(state, action.childId, action.amount, 0, action.reason, 'manual');
+      const credited = creditChild(state, action.childId, action.amount, action.xpAmount ?? 0, action.reason, 'manual');
       return { ...state, ...credited };
     }
     case 'RESET_ALL':
