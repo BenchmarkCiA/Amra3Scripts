@@ -126,21 +126,24 @@ it's almost certainly in `src/lib/supabaseSync.ts` or `supabaseClient.ts`.
   calendar date changes, all daily challenges reappear as not-done with no admin
   action needed.
 - **Quiz content now rotates day-to-day.** Each Math/English quiz's question bank
-  was expanded from a fixed 10 to a pool of 30 (`src/data/defaults.ts`), and each
+  was expanded from a fixed 10 to a pool (`src/data/defaults.ts`), and each
   day a *different* 10-question subset is drawn from that pool
   (`src/lib/dailyQuiz.ts`): a small seeded shuffle keyed on
   `(challengeId, today's date)`, so it's stable all day (same 10 questions if the
   child reopens it), different tomorrow, and requires no server/cron job — every
-  device computes the same result independently from the date alone. Honest math on
-  what "30" buys you: with 30 questions and 10 shown per day, a child doing the quiz
-  every single day will start seeing repeats after about 3 days, just in a different
-  order/combination each time — it is *not* 30 fully-distinct days of content. Getting
-  to genuinely 30 unique days would need ~300 authored questions per subject per kid
-  (10/day × 30 days), which is a much larger content-authoring effort; this pass
-  aimed for "meaningfully varies day to day" rather than "never repeats for a month."
+  device computes the same result independently from the date alone. Pool sizes as of
+  this pass: Math is now ~200 questions per kid (198 for Mia, 200 for Sam, 200 for
+  Alex) — algorithmically generated and independently re-verified for arithmetic
+  correctness and zero duplicates before shipping — which is enough for **about 20
+  days** before a child doing the quiz daily starts seeing repeats (up from ~3 days at
+  the old 30-question size). English stayed at 30 questions per kid (~3 days before
+  repeats) — it's still hand-authored rather than algorithmically generated (spelling/
+  vocabulary/grammar don't have a safe procedural-generation + auto-verification path
+  the way arithmetic does), so growing it further means writing another batch by hand.
   Expanding any pool further (or refreshing it with new questions periodically) is
-  just appending more entries to the array — see "Deliberately deferred" below for
-  what it would take to make that recur automatically without asking again each month.
+  just appending more entries to the array plus one additive Supabase migration — see
+  "Deliberately deferred" below for what it would take to make that recur
+  automatically without asking again each time.
 - Editable kid profiles: a parent can rename any kid from Settings.
 - Hebrew + RTL (PRD §7): a language toggle in Settings switches the UI chrome to
   Hebrew and flips the whole layout to right-to-left (`document.dir`, logical CSS
@@ -186,16 +189,17 @@ weren't part of this pass:
   are still single-question; only the system-seeded Math/English quizzes got the
   10-question treatment. Building a multi-question form builder is a bigger UI task
   than this pass covered.
-- **Automated monthly content refresh** — the 30-question pools rotate daily (see
-  above) but don't grow or refresh themselves; nothing currently adds a "next batch"
-  of questions on a schedule. Making that automatic needs one of: (a) a much bigger
-  hand-authored pool up front so rotation alone stays fresh for longer, (b) someone
-  asking for a fresh batch to be authored and appended periodically (the mechanism
-  supports this today — it's just appending entries to the arrays in
-  `src/data/defaults.ts` plus one additive Supabase migration, no architecture
-  change), or (c) the AI-generation pipeline above, which could generate and append
-  a new month's questions on a cron trigger, gated behind the same parent moderation
-  requirement as any other AI content.
+- **Automated content refresh** — the quiz pools rotate daily (see above) but don't
+  grow or refresh themselves; nothing currently adds a "next batch" of questions on a
+  schedule. Making that automatic needs one of: (a) an even bigger hand-authored/
+  generated pool up front so rotation alone stays fresh for longer (Math just did
+  this — see above), (b) someone asking for a fresh batch to be authored/generated
+  and appended periodically (the mechanism supports this today — it's just appending
+  entries to the arrays in `src/data/defaults.ts` plus one additive Supabase
+  migration, no architecture change), or (c) the AI-generation pipeline above, which
+  could generate and append new questions on a cron trigger, gated behind the same
+  parent moderation requirement as any other AI content. English/Knowledge remain on
+  hand-authored batches by explicit choice for now rather than moving to (c).
 
 ## Project structure
 
