@@ -6,6 +6,7 @@ import { TabBar, type KidScreen } from '../components/TabBar';
 import { KidHome } from './KidHome';
 import { KidQuests } from './KidQuests';
 import { RewardShop } from './RewardShop';
+import { XpShop } from './XpShop';
 import { StreaksBadges } from './StreaksBadges';
 import { TaskDetailModal } from './TaskDetailModal';
 import { t } from '../lib/i18n';
@@ -42,6 +43,7 @@ export function KidApp({ childId, onSwitchProfile }: Props) {
           )}
           {screen === 'quests' && <KidQuests child={child} onOpenTask={setActiveTaskId} />}
           {screen === 'rewards' && <RewardShop child={child} />}
+          {screen === 'shop' && <XpShop child={child} />}
           {screen === 'streaks' && <StreaksBadges child={child} />}
         </div>
         <TabBar active={screen} onChange={setScreen} lang={lang} />

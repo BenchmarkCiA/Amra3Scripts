@@ -2,7 +2,7 @@ import type { Child } from '../types';
 import { useStore, defaultBadges } from '../state/store';
 import { isBadgeUnlocked } from '../lib/badges';
 import { initialStreak } from '../lib/streak';
-import { t } from '../lib/i18n';
+import { localizeBadge, t } from '../lib/i18n';
 
 interface Props {
   child: Child;
@@ -40,11 +40,12 @@ export function StreaksBadges({ child }: Props) {
       <div className="badge-grid">
         {defaultBadges.map((badge) => {
           const unlocked = isBadgeUnlocked(state, child.id, badge);
+          const localized = localizeBadge(lang, badge);
           return (
             <div key={badge.id} className={`badge-card${unlocked ? '' : ' locked'}`}>
               <div className="badge-icon">⭐</div>
-              <div className="badge-name">{badge.name}</div>
-              <div className="badge-desc">{badge.description}</div>
+              <div className="badge-name">{localized.name}</div>
+              <div className="badge-desc">{localized.description}</div>
             </div>
           );
         })}

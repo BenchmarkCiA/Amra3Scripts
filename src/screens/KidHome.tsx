@@ -3,7 +3,7 @@ import { useStore } from '../state/store';
 import { Mascot } from '../components/Mascot';
 import { getTodayItemsForChild, isDone } from '../lib/selectors';
 import { CATEGORY_COLOR, computeReward } from '../lib/scoring';
-import { t } from '../lib/i18n';
+import { localizeChallengeText, localizeRewardName, t } from '../lib/i18n';
 import { todayISO } from '../lib/id';
 
 interface Props {
@@ -35,7 +35,7 @@ export function KidHome({ child, onOpenTask, onSeeAll }: Props) {
       {nextReward && (
         <div className="card progress-card">
           <div className="progress-label-row">
-            <span>{nextReward.name}</span>
+            <span>{localizeRewardName(lang, nextReward.name)}</span>
             <span>
               {child.stars} / {nextReward.cost}
             </span>
@@ -65,7 +65,7 @@ export function KidHome({ child, onOpenTask, onSeeAll }: Props) {
             >
               <span className="quest-dot" style={{ background: CATEGORY_COLOR[challenge.category] }} />
               <div className="quest-info">
-                <div className="quest-title">{challenge.title}</div>
+                <div className="quest-title">{localizeChallengeText(lang, challenge).title}</div>
                 <div className="quest-reward">
                   {completion?.status === 'awaiting_approval'
                     ? t(lang, 'waitingApproval')

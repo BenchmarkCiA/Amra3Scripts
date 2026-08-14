@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Challenge, QuizAnswerDetail, QuizQuestion } from '../types';
 import { useStore } from '../state/store';
 import { CATEGORY_COLOR, computeReward, isHelpingOthers } from '../lib/scoring';
-import { categoryLabel, t } from '../lib/i18n';
+import { categoryLabel, localizeChallengeText, t } from '../lib/i18n';
 import { factSubjects, randomFact } from '../data/facts';
 import { getDailyQuestions } from '../lib/dailyQuiz';
 import { todayISO } from '../lib/id';
@@ -17,6 +17,7 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
   const { state, dispatch } = useStore();
   const lang = state.language;
   const reward = computeReward(state.scoringConfig, challenge.difficulty, challenge.category);
+  const localized = localizeChallengeText(lang, challenge);
   const [submitted, setSubmitted] = useState(false);
   const [note, setNote] = useState('');
   const helpingOthers = isHelpingOthers(challenge.category);
@@ -50,8 +51,8 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
         <span className="quest-tag" style={{ background: CATEGORY_COLOR[challenge.category] }}>
           {categoryLabel(lang, challenge.category).toUpperCase()}
         </span>
-        <div className="modal-title">{challenge.title}</div>
-        <div className="modal-desc">{challenge.description}</div>
+        <div className="modal-title">{localized.title}</div>
+        <div className="modal-desc">{localized.description}</div>
 
         {reward.bonusApplied && (
           <div className="reward-preview">⭐ +{reward.stars} · ⚡ +{reward.xp} XP — {reward.bonusPct}% helping-others bonus!</div>
@@ -237,8 +238,8 @@ function DiscoveryBody({ onDone, lang }: { onDone: (note: string) => void; lang:
       </div>
       <div className="chip-row">
         {factSubjects.map((s) => (
-          <button key={s.id} type="button" className="chip" onClick={() => setPicked(randomFact(s.id))}>
-            {s.emoji} {s.label}
+          <button key={s.id} type="button" className="chip" onClick={() => setPicked(randomFact(s.id, lang))}>
+            {s.emoji} {lang === 'he' ? s.labelHe : s.label}
           </button>
         ))}
       </div>

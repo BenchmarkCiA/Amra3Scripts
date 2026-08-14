@@ -32,12 +32,13 @@ Settings) — **this is a UX gate, not a security boundary**: see the security n
 
 Schema (`children`, `challenges`, `challenge_completions`, `star_transactions`,
 `xp_transactions`, `rewards`, `reward_redemptions`, `streaks`, `scoring_config`,
-`app_settings`) was applied via two migrations (`init_family_quest_schema`,
-`seed_family_quest_data`) directly against the `family-quest` Supabase project
-(`ganqijzaprfjvutyrlwa`, org `BenchmarkCiA's Org`, `eu-west-1`, free tier — $0/mo). The
-sync layer lives in `src/lib/supabaseSync.ts` (write-through per dispatched action) and
-`src/lib/supabaseClient.ts`. `src/lib/id.ts`'s `makeId()` generates real UUIDs so
-locally-created records slot straight into Postgres `uuid` columns.
+`app_settings`, plus the XP Shop tables `digital_items`, `egg_defs`, `child_unlocks`,
+`child_eggs`) was applied via a series of additive migrations directly against the
+`family-quest` Supabase project (`ganqijzaprfjvutyrlwa`, org `BenchmarkCiA's Org`,
+`eu-west-1`, free tier — $0/mo). The sync layer lives in `src/lib/supabaseSync.ts`
+(write-through per dispatched action) and `src/lib/supabaseClient.ts`. `src/lib/id.ts`'s
+`makeId()` generates real UUIDs so locally-created records slot straight into Postgres
+`uuid` columns.
 
 **⚠️ Security note — read before deploying anywhere public.** This is built for the
 PRD's stated scope: "a private, single-family application... no public sign-up" (§37).
@@ -111,11 +112,51 @@ it's almost certainly in `src/lib/supabaseSync.ts` or `supabaseClient.ts`.
 - Helping-others "what did you do?" notes: kindness/sibling/family self-report
   challenges require a short text answer before marking complete, visible to the
   parent on the dashboard (PRD §34 trust-based verification).
-- Parent Dashboard: manual Stars/XP adjustment for any child (positive or negative,
-  with an optional reason, fully logged as a normal transaction — PRD §15/§16 audit
-  trail), and a per-challenge "Reset" button that reverses any Stars/XP already
-  awarded for that completion and makes the quest available again the same day —
-  useful for redoing a quiz or undoing a mistaken approval.
+- Parent Dashboard: a "Set Stars / XP Balance" card sets a child's balance to an
+  **exact** number (not a +/- delta) — pick a child, the fields prefill with their
+  current balance, edit either one (typing `0` genuinely zeroes it out) and Save, or
+  use the one-tap "Reset to 0" button. Internally this still records the equivalent
+  +/- transaction for audit history, it's just presented as "what should the balance
+  be" rather than "how much to add," which is what a parent actually wants when
+  correcting a mistake. Every change is logged as a normal transaction (PRD §15/§16
+  audit trail). There's also a per-challenge "Reset" button that reverses any Stars/XP
+  already awarded for that completion and makes the quest available again the same
+  day — useful for redoing a quiz or undoing a mistaken approval.
+- **XP Shop — characters, growth, and eggs** (kid tab "Shop"; parent tab "Shop" for
+  admin controls): a second progression track alongside the Stars reward shop, built
+  around the core rule that **XP is never spent** — "unlocking" a character just
+  permanently records that a child reached the XP threshold, and Stars/XP stay
+  untouched. Scope, deliberately: characters + growth + eggs only (see "Deliberately
+  deferred" for what's out of this pass).
+  - *Characters*: ~10 single-stage characters (astronaut, robot, pirate, wizard, fox,
+    panda, space explorer, fairy, kitten, bunny) each unlock permanently once a
+    child's lifetime XP crosses a threshold, filtered by an age range per item so a
+    5-year-old and a 13-year-old see different shop content (PRD's "age-based shop").
+    Each kid starts with one free character already unlocked (bunny/fox/astronaut for
+    the 5/11/13-year-olds respectively) so the shop is never empty on day one.
+    Unlocked characters can be freely switched ("Use") with no cost and stay unlocked
+    forever.
+  - *Growth*: 4 of the characters (dragon, unicorn, puppy, dino) have 2-3 visual
+    stages, each gated by a higher lifetime-XP threshold than the last. Growing into
+    the next stage is automatic and free the moment XP crosses the line — no button
+    to press, no XP spent, and it can't be "undone" by spending XP since XP never
+    goes down.
+  - *Eggs*: once a child's lifetime XP crosses a parent-configurable global gate
+    (Settings → "Egg unlock threshold," default 2000), an egg-selection screen opens
+    showing eggs they haven't already hatched, filtered by age. Choosing an egg
+    snapshots the child's XP at that moment; the egg's hatch progress is `current XP −
+    that snapshot`, so incubating an egg never touches or requires spending the
+    child's real XP total (`src/lib/xpShop.ts` `eggProgress()`). Once progress
+    reaches the egg's requirement, a "Hatch now!" button appears; hatching
+    permanently unlocks that egg's character family (starting at its baby stage) and
+    equips it immediately. A child can only incubate one egg at a time — Parent →
+    Shop can "Reset Egg" to let them pick again if needed.
+  - *Parent controls* (Parent mode → "Shop" tab): per-child summary (equipped
+    character, families unlocked, current egg progress, hatched eggs, reset-egg
+    button), and inline editing of every character's/egg's XP requirement and age
+    range — nothing is hardcoded, matching the PRD's "these values must not be
+    hard-coded" requirement for the egg threshold specifically, extended here to all
+    thresholds and age ranges.
 - Monthly Stats (Parent → Stats, PRD §26 Parent Analytics): pick any month a child
   has activity in and see total challenges completed, Stars/XP earned, quizzes taken
   with average first-try accuracy, and a per-category breakdown — answers "how many
@@ -147,8 +188,17 @@ it's almost certainly in `src/lib/supabaseSync.ts` or `supabaseClient.ts`.
 - Editable kid profiles: a parent can rename any kid from Settings.
 - Hebrew + RTL (PRD §7): a language toggle in Settings switches the UI chrome to
   Hebrew and flips the whole layout to right-to-left (`document.dir`, logical CSS
-  properties throughout). Seed challenge/quiz/fact *content* stays English-authored
-  for now — see "Deliberately deferred" below.
+  properties throughout). Seed challenge titles/descriptions, reward names, badge
+  names/descriptions, and the Discovery fact library are now translated too
+  (`localizeChallengeText`/`localizeRewardName`/`localizeBadge` in `src/lib/i18n.ts`,
+  `factsHe` in `src/data/facts.ts`) — the earlier version only translated UI chrome,
+  which meant a Hebrew-mode quest card showed a Hebrew category tag next to an
+  English title/description in the same box. The one deliberate exception: the
+  English-vocabulary quiz ("Word Wizard") stays English end-to-end, title included —
+  translating the label but not the spelling/vocabulary questions inside it would
+  produce the same kind of mixed-language box for a challenge whose entire point is
+  English, so `localizeChallengeText` special-cases `category === 'english'` to skip
+  translation entirely rather than translate half of it.
 - Streaks with monthly freeze tokens (PRD §21) so one missed day doesn't reset
   progress to zero.
 - Badges/achievements with per-category and cumulative thresholds (PRD §22).
@@ -171,11 +221,35 @@ weren't part of this pass:
 - **Claude API-generated challenges + moderation queue** (PRD §32/§33) — the
   `content_moderation_queue`-shaped review step isn't built, and no AI generation
   is wired up yet.
-- **Hebrew content translation** — the language toggle covers UI chrome (buttons,
-  nav, labels, category names); challenge titles/descriptions, the 40 quiz questions,
-  and the fun-fact library are still English-only. Translating educational content
-  accurately (especially spelling/grammar questions, which are English-specific by
-  nature) is a separate effort from RTL/layout support.
+- **Hebrew content translation** — chrome, seed challenge titles/descriptions,
+  rewards, badges, and Discovery facts are translated (see above). The quiz
+  *questions themselves* (math digits/expressions are language-neutral already;
+  English-vocabulary questions stay English on purpose) and any content a parent
+  types into a custom challenge/reward are not auto-translated.
+- **XP Shop scope** — this pass built characters + growth stages + eggs
+  (PRD "XP Character, Egg & Age-5 Content System" spec, sections 1-24/35-46), matching
+  its own "MVP scope" guidance (~10-15 characters, ~5-6 eggs, a few growth stages) —
+  not the full spec. Explicitly **not** built: per-character customization slots
+  (hair/hat/clothing/accessories — spec §8, optional/expandable by the spec's own
+  wording), achievement- or level-based unlock conditions (only XP-threshold unlocks
+  are wired up; `DigitalItem.unlockType` only has `'xp' | 'egg'`, not `'level' |
+  'achievement'`), and a parent UI for *creating* brand-new characters/eggs from
+  scratch (parents can retune XP thresholds and age ranges on the built-in catalog
+  from Parent → Shop, but adding a new character/egg means editing
+  `src/data/characters.ts` and one additive migration — there's no art pipeline, so
+  new items are emoji-based like the existing ones, consistent with the rest of the
+  app's visual style).
+- **Age-5 content category overhaul** (spec sections 25-34: Complete-the-Picture
+  creative challenges, visual/picture-based math and English, a memory-card game,
+  off-screen Explorer missions, gamified Movement missions, an "I Can Do It!"
+  life-skills category, and a rotating Daily Adventure) — not built this pass. This
+  is genuinely a separate, comparably-sized effort (new challenge kinds, a memory-game
+  engine, off-screen-mission approval flows) from the XP Shop system above, and the
+  spec's own repeated guidance is "don't build everything at once" — this pass
+  prioritized the XP Shop since that's what was explicitly asked for. Mia's existing
+  daily challenges (Counting Fun, Draw & Doodle, Toy Pickup, Kind Heart, Discovery)
+  are unchanged and still age-appropriate; they just don't yet reflect the richer
+  9-category structure the spec describes.
 - Non-Reader Mode audio/icon-only presentation for Mia (PRD §6) — the age-appropriate
   seed content is there, but there's no text-to-speech or icon-only input yet.
 - Adaptive difficulty (PRD §31) — difficulty is currently parent-set per challenge.

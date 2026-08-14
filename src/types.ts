@@ -82,6 +82,7 @@ export interface Child {
   readingLevel: ReadingLevel;
   stars: number;
   xp: number;
+  equippedFamily: string | null; // DigitalItem.familyId currently shown as this child's avatar
 }
 
 export interface StarTransaction {
@@ -142,4 +143,59 @@ export interface ScoringConfig {
   helpingOthersBonusPct: number; // applied to kindness/sibling/family categories
   minChallengesForStreak: number;
   monthlyFreezeTokens: number;
+  eggUnlockThreshold: number; // lifetime XP needed before the egg-selection screen opens
+}
+
+// ---- XP Shop: characters, growth, eggs -------------------------------
+// XP is never spent here — "unlock" just permanently records that the child
+// has reached the threshold. See README for the full design rationale.
+
+export type UnlockType = 'xp' | 'egg'; // 'egg' items can only be obtained by hatching, never bought directly
+
+export interface DigitalItem {
+  id: string;
+  key: string; // stable slug, e.g. "astronaut", "dragon-baby"
+  name: string;
+  nameHe: string;
+  emoji: string;
+  familyId: string; // groups an item with its growth stages (and itself, if it has none)
+  stageOrder: number; // 0 = base stage; higher stages are grown into automatically
+  xpRequirement: number; // lifetime XP needed to reach this stage
+  minAge: number;
+  maxAge: number;
+  unlockType: UnlockType;
+  active: boolean;
+}
+
+export interface ChildUnlock {
+  id: string;
+  childId: string;
+  itemId: string; // always a stageOrder:0 DigitalItem id — later stages are derived, not stored
+  unlockedAt: string;
+}
+
+export interface EggDef {
+  id: string;
+  key: string;
+  name: string;
+  nameHe: string;
+  emoji: string;
+  familyId: string; // which character family hatches out of this egg
+  requiredXp: number; // XP needed after selecting the egg, before it can hatch
+  minAge: number;
+  maxAge: number;
+  active: boolean;
+}
+
+export type ChildEggStatus = 'selected' | 'hatched';
+
+export interface ChildEgg {
+  id: string;
+  childId: string;
+  eggId: string;
+  selectedAt: string;
+  startingXp: number; // lifetime XP snapshot at selection — progress = current XP - this
+  requiredXp: number;
+  status: ChildEggStatus;
+  hatchedAt?: string;
 }

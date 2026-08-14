@@ -3,6 +3,10 @@ import type {
   Challenge,
   ChallengeCompletion,
   Child,
+  ChildEgg,
+  ChildUnlock,
+  DigitalItem,
+  EggDef,
   Language,
   QuizAnswerDetail,
   Reward,
@@ -13,6 +17,7 @@ import type {
   XPTransaction,
 } from '../types';
 import { defaultBadges, defaultChallenges, defaultChildren, defaultRewards } from '../data/defaults';
+import { characterItems as defaultCharacterItems, eggDefs as defaultEggDefs, starterFamilyByChildId } from '../data/characters';
 import { computeReward, defaultScoringConfig } from '../lib/scoring';
 import { makeId, todayISO } from '../lib/id';
 import { bumpStreak, initialStreak } from '../lib/streak';
@@ -34,13 +39,24 @@ export interface AppState {
   scoringConfig: ScoringConfig;
   parentPin: string;
   language: Language;
+  characterItems: DigitalItem[];
+  eggDefs: EggDef[];
+  childUnlocks: ChildUnlock[];
+  childEggs: ChildEgg[];
 }
 
 function buildInitialState(): AppState {
   const streaks: Record<string, StreakInfo> = {};
   for (const c of defaultChildren) streaks[c.id] = initialStreak(c.id, defaultScoringConfig.monthlyFreezeTokens);
+  const children = defaultChildren.map((c) => ({ ...c, equippedFamily: starterFamilyByChildId[c.id] ?? null }));
+  const childUnlocks: ChildUnlock[] = children
+    .filter((c) => c.equippedFamily)
+    .map((c) => {
+      const starterItem = defaultCharacterItems.find((i) => i.familyId === c.equippedFamily && i.stageOrder === 0)!;
+      return { id: makeId(), childId: c.id, itemId: starterItem.id, unlockedAt: new Date().toISOString() };
+    });
   return {
-    children: defaultChildren,
+    children,
     challenges: defaultChallenges,
     completions: [],
     starTx: [],
@@ -51,6 +67,10 @@ function buildInitialState(): AppState {
     scoringConfig: defaultScoringConfig,
     parentPin: DEFAULT_PARENT_PIN,
     language: 'en',
+    characterItems: defaultCharacterItems,
+    eggDefs: defaultEggDefs,
+    childUnlocks,
+    childEggs: [],
   };
 }
 
@@ -61,7 +81,19 @@ function loadInitialState(): AppState {
     const parsed = JSON.parse(raw) as AppState;
     // Guard against a corrupted / pre-migration blob.
     if (!parsed.children || !parsed.scoringConfig) return buildInitialState();
-    return { ...parsed, language: parsed.language ?? 'en' };
+    // Backfill fields added after some users already had a localStorage blob,
+    // so existing saves upgrade in place instead of resetting.
+    const fresh = buildInitialState();
+    return {
+      ...parsed,
+      language: parsed.language ?? 'en',
+      children: parsed.children.map((c) => ({ ...c, equippedFamily: c.equippedFamily ?? null })),
+      scoringConfig: { ...fresh.scoringConfig, ...parsed.scoringConfig, eggUnlockThreshold: parsed.scoringConfig.eggUnlockThreshold ?? fresh.scoringConfig.eggUnlockThreshold },
+      characterItems: parsed.characterItems ?? fresh.characterItems,
+      eggDefs: parsed.eggDefs ?? fresh.eggDefs,
+      childUnlocks: parsed.childUnlocks ?? fresh.childUnlocks,
+      childEggs: parsed.childEggs ?? [],
+    };
   } catch {
     return buildInitialState();
   }
@@ -86,6 +118,14 @@ export type Action =
   | { type: 'SET_LANGUAGE'; language: Language }
   | { type: 'UPDATE_CHILD_NAME'; childId: string; name: string }
   | { type: 'ADJUST_STARS'; childId: string; amount: number; xpAmount?: number; reason: string }
+  | { type: 'SET_BALANCE'; childId: string; stars: number; xp: number; reason: string }
+  | { type: 'UNLOCK_ITEM'; childId: string; itemId: string }
+  | { type: 'EQUIP_FAMILY'; childId: string; familyId: string }
+  | { type: 'SELECT_EGG'; childId: string; eggId: string; childEggId?: string }
+  | { type: 'HATCH_EGG'; childEggId: string }
+  | { type: 'RESET_EGG'; childEggId: string }
+  | { type: 'UPDATE_CHARACTER_ITEM'; item: DigitalItem }
+  | { type: 'UPDATE_EGG_DEF'; egg: EggDef }
   | { type: 'RESET_ALL' }
   | { type: 'HYDRATE'; state: AppState };
 
@@ -279,6 +319,68 @@ function reducer(state: AppState, action: Action): AppState {
       const credited = creditChild(state, action.childId, action.amount, action.xpAmount ?? 0, action.reason, 'manual');
       return { ...state, ...credited };
     }
+    case 'SET_BALANCE': {
+      const child = state.children.find((c) => c.id === action.childId);
+      if (!child) return state;
+      const deltaStars = action.stars - child.stars;
+      const deltaXp = action.xp - child.xp;
+      const credited = creditChild(state, action.childId, deltaStars, deltaXp, action.reason, 'manual-set');
+      return { ...state, ...credited };
+    }
+    case 'UNLOCK_ITEM': {
+      const child = state.children.find((c) => c.id === action.childId);
+      const item = state.characterItems.find((i) => i.id === action.itemId);
+      if (!child || !item) return state;
+      const already = state.childUnlocks.some((u) => u.childId === child.id && u.itemId === item.id);
+      if (already) return state;
+      const unlock: ChildUnlock = { id: makeId(), childId: child.id, itemId: item.id, unlockedAt: new Date().toISOString() };
+      return { ...state, childUnlocks: [...state.childUnlocks, unlock] };
+    }
+    case 'EQUIP_FAMILY': {
+      return { ...state, children: state.children.map((c) => (c.id === action.childId ? { ...c, equippedFamily: action.familyId } : c)) };
+    }
+    case 'SELECT_EGG': {
+      const child = state.children.find((c) => c.id === action.childId);
+      const egg = state.eggDefs.find((e) => e.id === action.eggId);
+      if (!child || !egg) return state;
+      const hasActiveEgg = state.childEggs.some((e) => e.childId === child.id && e.status === 'selected');
+      if (hasActiveEgg) return state;
+      const childEgg: ChildEgg = {
+        id: action.childEggId ?? makeId(),
+        childId: child.id,
+        eggId: egg.id,
+        selectedAt: new Date().toISOString(),
+        startingXp: child.xp,
+        requiredXp: egg.requiredXp,
+        status: 'selected',
+      };
+      return { ...state, childEggs: [...state.childEggs, childEgg] };
+    }
+    case 'HATCH_EGG': {
+      const childEgg = state.childEggs.find((e) => e.id === action.childEggId);
+      if (!childEgg || childEgg.status !== 'selected') return state;
+      const child = state.children.find((c) => c.id === childEgg.childId);
+      const egg = state.eggDefs.find((e) => e.id === childEgg.eggId);
+      if (!child || !egg) return state;
+      if (child.xp - childEgg.startingXp < childEgg.requiredXp) return state;
+      const childEggs = state.childEggs.map((e) => (e.id === childEgg.id ? { ...e, status: 'hatched' as const, hatchedAt: new Date().toISOString() } : e));
+      const baseItem = state.characterItems.find((i) => i.familyId === egg.familyId && i.stageOrder === 0);
+      let childUnlocks = state.childUnlocks;
+      if (baseItem && !childUnlocks.some((u) => u.childId === child.id && u.itemId === baseItem.id)) {
+        childUnlocks = [...childUnlocks, { id: makeId(), childId: child.id, itemId: baseItem.id, unlockedAt: new Date().toISOString() }];
+      }
+      const children = state.children.map((c) => (c.id === child.id ? { ...c, equippedFamily: egg.familyId } : c));
+      return { ...state, childEggs, childUnlocks, children };
+    }
+    case 'RESET_EGG': {
+      return { ...state, childEggs: state.childEggs.filter((e) => e.id !== action.childEggId) };
+    }
+    case 'UPDATE_CHARACTER_ITEM': {
+      return { ...state, characterItems: state.characterItems.map((i) => (i.id === action.item.id ? action.item : i)) };
+    }
+    case 'UPDATE_EGG_DEF': {
+      return { ...state, eggDefs: state.eggDefs.map((e) => (e.id === action.egg.id ? action.egg : e)) };
+    }
     case 'RESET_ALL':
       return buildInitialState();
     case 'HYDRATE':
@@ -331,6 +433,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (action.type === 'COMPLETE_QUIZ' && !action.completionId) finalAction = { ...action, completionId: makeId() };
     if (action.type === 'COMPLETE_TASK' && !action.completionId) finalAction = { ...action, completionId: makeId() };
     if (action.type === 'REDEEM_REWARD' && !action.redemptionId) finalAction = { ...action, redemptionId: makeId() };
+    if (action.type === 'SELECT_EGG' && !action.childEggId) finalAction = { ...action, childEggId: makeId() };
     reactDispatch(finalAction);
     if (isSupabaseConfigured) {
       syncActionToSupabase(finalAction, stateRef.current).catch((err) => console.error('Supabase sync failed', err));

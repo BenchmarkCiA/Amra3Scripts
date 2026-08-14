@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Child } from '../types';
 import { useStore } from '../state/store';
-import { t } from '../lib/i18n';
+import { localizeRewardName, t } from '../lib/i18n';
 
 interface Props {
   child: Child;
@@ -29,10 +29,11 @@ export function RewardShop({ child }: Props) {
 
       {rewards.map((reward) => {
         const affordable = child.stars >= reward.cost;
+        const name = localizeRewardName(lang, reward.name);
         return (
           <div key={reward.id} className="reward-card">
             <div>
-              <div className="reward-name">{reward.name}</div>
+              <div className="reward-name">{name}</div>
               <div className="reward-cost">
                 {reward.cost} {t(lang, 'stars')}
               </div>
@@ -40,7 +41,7 @@ export function RewardShop({ child }: Props) {
             <button
               className={`redeem-btn ${affordable ? 'active' : 'disabled'}`}
               disabled={!affordable}
-              onClick={() => handleRedeem(reward.id, reward.name)}
+              onClick={() => handleRedeem(reward.id, name)}
             >
               {t(lang, 'redeem')}
             </button>

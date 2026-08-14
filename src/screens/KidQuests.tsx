@@ -2,7 +2,7 @@ import type { Child } from '../types';
 import { useStore } from '../state/store';
 import { getTodayItemsForChild, isDone } from '../lib/selectors';
 import { CATEGORY_COLOR, computeReward } from '../lib/scoring';
-import { categoryLabel, t } from '../lib/i18n';
+import { categoryLabel, localizeChallengeText, t } from '../lib/i18n';
 import { todayISO } from '../lib/id';
 
 interface Props {
@@ -38,7 +38,7 @@ export function KidQuests({ child, onOpenTask }: Props) {
                 {categoryLabel(lang, challenge.category).toUpperCase()}
               </span>
               <div className="quest-info">
-                <div className="quest-title">{challenge.title}</div>
+                <div className="quest-title">{localizeChallengeText(lang, challenge).title}</div>
                 <div className="quest-reward">
                   {completion?.status === 'awaiting_approval'
                     ? t(lang, 'waitingApproval')

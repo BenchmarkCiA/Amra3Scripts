@@ -3,6 +3,10 @@ import type {
   Challenge,
   ChallengeCompletion,
   Child,
+  ChildEgg,
+  ChildUnlock,
+  DigitalItem,
+  EggDef,
   Reward,
   RewardRedemption,
   ScoringConfig,
@@ -30,6 +34,56 @@ function mapChild(row: any): Child {
     readingLevel: row.reading_level,
     stars: row.stars,
     xp: row.xp,
+    equippedFamily: row.equipped_family ?? null,
+  };
+}
+
+function mapDigitalItem(row: any): DigitalItem {
+  return {
+    id: row.id,
+    key: row.key,
+    name: row.name,
+    nameHe: row.name_he,
+    emoji: row.emoji,
+    familyId: row.family_id,
+    stageOrder: row.stage_order,
+    xpRequirement: row.xp_requirement,
+    minAge: row.min_age,
+    maxAge: row.max_age,
+    unlockType: row.unlock_type,
+    active: row.active,
+  };
+}
+
+function mapEggDef(row: any): EggDef {
+  return {
+    id: row.id,
+    key: row.key,
+    name: row.name,
+    nameHe: row.name_he,
+    emoji: row.emoji,
+    familyId: row.family_id,
+    requiredXp: row.required_xp,
+    minAge: row.min_age,
+    maxAge: row.max_age,
+    active: row.active,
+  };
+}
+
+function mapChildUnlock(row: any): ChildUnlock {
+  return { id: row.id, childId: row.child_id, itemId: row.item_id, unlockedAt: row.unlocked_at };
+}
+
+function mapChildEgg(row: any): ChildEgg {
+  return {
+    id: row.id,
+    childId: row.child_id,
+    eggId: row.egg_id,
+    selectedAt: row.selected_at,
+    startingXp: row.starting_xp,
+    requiredXp: row.required_xp,
+    status: row.status,
+    hatchedAt: row.hatched_at ?? undefined,
   };
 }
 
@@ -103,6 +157,7 @@ function mapScoringConfig(row: any): ScoringConfig {
     helpingOthersBonusPct: row.helping_others_bonus_pct,
     minChallengesForStreak: row.min_challenges_for_streak,
     monthlyFreezeTokens: row.monthly_freeze_tokens,
+    eggUnlockThreshold: row.egg_unlock_threshold ?? 2000,
   };
 }
 
@@ -110,21 +165,54 @@ function mapScoringConfig(row: any): ScoringConfig {
 
 export async function fetchAppState(): Promise<AppState | null> {
   const db = must();
-  const [children, challenges, completions, starTx, xpTx, rewards, redemptions, streaks, scoringConfig, appSettings] =
-    await Promise.all([
-      db.from('children').select('*').order('created_at'),
-      db.from('challenges').select('*').order('created_at'),
-      db.from('challenge_completions').select('*'),
-      db.from('star_transactions').select('*').order('created_at'),
-      db.from('xp_transactions').select('*').order('created_at'),
-      db.from('rewards').select('*'),
-      db.from('reward_redemptions').select('*').order('created_at'),
-      db.from('streaks').select('*'),
-      db.from('scoring_config').select('*').eq('id', 1).maybeSingle(),
-      db.from('app_settings').select('*').eq('id', 1).maybeSingle(),
-    ]);
+  const [
+    children,
+    challenges,
+    completions,
+    starTx,
+    xpTx,
+    rewards,
+    redemptions,
+    streaks,
+    scoringConfig,
+    appSettings,
+    digitalItems,
+    eggDefsRes,
+    childUnlocks,
+    childEggs,
+  ] = await Promise.all([
+    db.from('children').select('*').order('created_at'),
+    db.from('challenges').select('*').order('created_at'),
+    db.from('challenge_completions').select('*'),
+    db.from('star_transactions').select('*').order('created_at'),
+    db.from('xp_transactions').select('*').order('created_at'),
+    db.from('rewards').select('*'),
+    db.from('reward_redemptions').select('*').order('created_at'),
+    db.from('streaks').select('*'),
+    db.from('scoring_config').select('*').eq('id', 1).maybeSingle(),
+    db.from('app_settings').select('*').eq('id', 1).maybeSingle(),
+    db.from('digital_items').select('*'),
+    db.from('egg_defs').select('*'),
+    db.from('child_unlocks').select('*'),
+    db.from('child_eggs').select('*'),
+  ]);
 
-  for (const res of [children, challenges, completions, starTx, xpTx, rewards, redemptions, streaks, scoringConfig, appSettings]) {
+  for (const res of [
+    children,
+    challenges,
+    completions,
+    starTx,
+    xpTx,
+    rewards,
+    redemptions,
+    streaks,
+    scoringConfig,
+    appSettings,
+    digitalItems,
+    eggDefsRes,
+    childUnlocks,
+    childEggs,
+  ]) {
     if (res.error) throw res.error;
   }
 
@@ -143,6 +231,10 @@ export async function fetchAppState(): Promise<AppState | null> {
     scoringConfig: scoringConfig.data ? mapScoringConfig(scoringConfig.data) : ({} as ScoringConfig),
     parentPin: appSettings.data?.parent_pin ?? '1234',
     language: appSettings.data?.language ?? 'en',
+    characterItems: (digitalItems.data ?? []).map(mapDigitalItem),
+    eggDefs: (eggDefsRes.data ?? []).map(mapEggDef),
+    childUnlocks: (childUnlocks.data ?? []).map(mapChildUnlock),
+    childEggs: (childEggs.data ?? []).map(mapChildEgg),
   };
 }
 
@@ -372,6 +464,7 @@ export async function syncActionToSupabase(action: Action, prevState: AppState):
           helping_others_bonus_pct: action.config.helpingOthersBonusPct,
           min_challenges_for_streak: action.config.minChallengesForStreak,
           monthly_freeze_tokens: action.config.monthlyFreezeTokens,
+          egg_unlock_threshold: action.config.eggUnlockThreshold,
         })
         .eq('id', 1);
       if (error) throw error;
@@ -394,6 +487,94 @@ export async function syncActionToSupabase(action: Action, prevState: AppState):
     }
     case 'ADJUST_STARS': {
       await creditChildRow(action.childId, action.amount, action.xpAmount ?? 0, action.reason, 'manual', prevState);
+      return;
+    }
+    case 'SET_BALANCE': {
+      const child = prevState.children.find((c) => c.id === action.childId);
+      if (!child) return;
+      const deltaStars = action.stars - child.stars;
+      const deltaXp = action.xp - child.xp;
+      await creditChildRow(action.childId, deltaStars, deltaXp, action.reason, 'manual-set', prevState);
+      return;
+    }
+    case 'UNLOCK_ITEM': {
+      const already = prevState.childUnlocks.some((u) => u.childId === action.childId && u.itemId === action.itemId);
+      if (already) return;
+      const { error } = await db.from('child_unlocks').insert({ child_id: action.childId, item_id: action.itemId });
+      if (error) throw error;
+      return;
+    }
+    case 'EQUIP_FAMILY': {
+      const { error } = await db.from('children').update({ equipped_family: action.familyId }).eq('id', action.childId);
+      if (error) throw error;
+      return;
+    }
+    case 'SELECT_EGG': {
+      const child = prevState.children.find((c) => c.id === action.childId);
+      const egg = prevState.eggDefs.find((e) => e.id === action.eggId);
+      if (!child || !egg) return;
+      const hasActiveEgg = prevState.childEggs.some((e) => e.childId === child.id && e.status === 'selected');
+      if (hasActiveEgg) return;
+      const { error } = await db.from('child_eggs').insert({
+        id: action.childEggId ?? makeId(),
+        child_id: child.id,
+        egg_id: egg.id,
+        starting_xp: child.xp,
+        required_xp: egg.requiredXp,
+        status: 'selected',
+      });
+      if (error) throw error;
+      return;
+    }
+    case 'HATCH_EGG': {
+      const childEgg = prevState.childEggs.find((e) => e.id === action.childEggId);
+      if (!childEgg || childEgg.status !== 'selected') return;
+      const child = prevState.children.find((c) => c.id === childEgg.childId);
+      const egg = prevState.eggDefs.find((e) => e.id === childEgg.eggId);
+      if (!child || !egg) return;
+      if (child.xp - childEgg.startingXp < childEgg.requiredXp) return;
+      const { error } = await db
+        .from('child_eggs')
+        .update({ status: 'hatched', hatched_at: new Date().toISOString() })
+        .eq('id', childEgg.id);
+      if (error) throw error;
+      const baseItem = prevState.characterItems.find((i) => i.familyId === egg.familyId && i.stageOrder === 0);
+      if (baseItem && !prevState.childUnlocks.some((u) => u.childId === child.id && u.itemId === baseItem.id)) {
+        const { error: unlockError } = await db.from('child_unlocks').insert({ child_id: child.id, item_id: baseItem.id });
+        if (unlockError) throw unlockError;
+      }
+      await db.from('children').update({ equipped_family: egg.familyId }).eq('id', child.id);
+      return;
+    }
+    case 'RESET_EGG': {
+      const { error } = await db.from('child_eggs').delete().eq('id', action.childEggId);
+      if (error) throw error;
+      return;
+    }
+    case 'UPDATE_CHARACTER_ITEM': {
+      const i = action.item;
+      const { error } = await db
+        .from('digital_items')
+        .update({
+          name: i.name,
+          name_he: i.nameHe,
+          emoji: i.emoji,
+          xp_requirement: i.xpRequirement,
+          min_age: i.minAge,
+          max_age: i.maxAge,
+          active: i.active,
+        })
+        .eq('id', i.id);
+      if (error) throw error;
+      return;
+    }
+    case 'UPDATE_EGG_DEF': {
+      const e = action.egg;
+      const { error } = await db
+        .from('egg_defs')
+        .update({ name: e.name, name_he: e.nameHe, emoji: e.emoji, required_xp: e.requiredXp, min_age: e.minAge, max_age: e.maxAge, active: e.active })
+        .eq('id', e.id);
+      if (error) throw error;
       return;
     }
     case 'RESET_ALL':

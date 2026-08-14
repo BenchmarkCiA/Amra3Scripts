@@ -158,6 +158,16 @@ export function ParentSettings() {
               onChange={(e) => setConfig((prev) => ({ ...prev, monthlyFreezeTokens: Number(e.target.value) }))}
             />
           </div>
+          <div className="form-group">
+            <label className="form-label">Egg unlock threshold (lifetime XP before the egg screen opens)</label>
+            <input
+              className="form-input"
+              type="number"
+              min={0}
+              value={config.eggUnlockThreshold}
+              onChange={(e) => setConfig((prev) => ({ ...prev, eggUnlockThreshold: Number(e.target.value) }))}
+            />
+          </div>
         </div>
 
         <div className="card" style={{ marginBottom: 16 }}>

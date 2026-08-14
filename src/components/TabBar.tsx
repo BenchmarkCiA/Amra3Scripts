@@ -1,12 +1,13 @@
 import type { Language } from '../types';
 import { t } from '../lib/i18n';
 
-export type KidScreen = 'home' | 'quests' | 'rewards' | 'streaks';
+export type KidScreen = 'home' | 'quests' | 'rewards' | 'shop' | 'streaks';
 
 const TAB_KEYS = [
   { key: 'home' as const, labelKey: 'tabHome' as const },
   { key: 'quests' as const, labelKey: 'tabQuests' as const },
   { key: 'rewards' as const, labelKey: 'tabRewards' as const },
+  { key: 'shop' as const, labelKey: 'tabShop' as const },
   { key: 'streaks' as const, labelKey: 'tabStreaks' as const },
 ];
 

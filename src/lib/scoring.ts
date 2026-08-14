@@ -17,6 +17,7 @@ export const defaultScoringConfig: ScoringConfig = {
   helpingOthersBonusPct: 50,
   minChallengesForStreak: 2,
   monthlyFreezeTokens: 2,
+  eggUnlockThreshold: 2000,
 };
 
 const HELPING_OTHERS_CATEGORIES: ReadonlySet<Category> = new Set([

@@ -62,6 +62,32 @@ const dict = {
     rewards: 'Rewards',
     stats: 'Stats',
     settings: 'Settings',
+    tabShop: 'Shop',
+    xpShopTitle: 'XP Shop',
+    yourXp: 'Your XP',
+    myCharacter: 'My Character',
+    changeCharacter: 'Change Character',
+    unlockAt: 'Unlock at',
+    unlocked: 'UNLOCKED',
+    use: 'Use',
+    inUse: 'In use',
+    unlockBtn: 'Unlock',
+    myEgg: 'My Egg',
+    chooseYourEgg: 'Choose your egg!',
+    eggAvailable: 'Egg available!',
+    hatchingProgress: 'Hatching progress',
+    hatchNow: 'Hatch now!',
+    eggReady: "Your egg is ready!",
+    newCharacter: 'New character!',
+    welcomeCompanion: 'Welcome to your new companion!',
+    almostThere: 'Almost there!',
+    chooseThisEgg: 'Choose this egg',
+    hatchingRequirement: 'Hatching requirement',
+    yourDragonGrew: 'Your character grew!',
+    nextStage: 'Next stage',
+    fullyGrown: 'Fully grown!',
+    noEggYet: "You haven't chosen an egg yet.",
+    keepEarningForEgg: 'Keep earning XP to unlock the egg screen!',
   },
   he: {
     appName: 'משימת המשפחה',
@@ -117,6 +143,32 @@ const dict = {
     rewards: 'פרסים',
     stats: 'סטטיסטיקה',
     settings: 'הגדרות',
+    tabShop: 'חנות',
+    xpShopTitle: 'חנות ה-XP',
+    yourXp: 'ה-XP שלך',
+    myCharacter: 'הדמות שלי',
+    changeCharacter: 'החלפת דמות',
+    unlockAt: 'נפתח ב-',
+    unlocked: 'נפתח',
+    use: 'שימוש',
+    inUse: 'בשימוש',
+    unlockBtn: 'פתיחה',
+    myEgg: 'הביצה שלי',
+    chooseYourEgg: 'בחרו את הביצה שלכם!',
+    eggAvailable: 'ביצה זמינה!',
+    hatchingProgress: 'התקדמות בבקיעה',
+    hatchNow: 'לבקוע עכשיו!',
+    eggReady: 'הביצה שלכם מוכנה!',
+    newCharacter: 'דמות חדשה!',
+    welcomeCompanion: 'ברוכים הבאים לחבר החדש שלכם!',
+    almostThere: 'כמעט הגעתם!',
+    chooseThisEgg: 'לבחור בביצה הזו',
+    hatchingRequirement: 'דרישת בקיעה',
+    yourDragonGrew: 'הדמות שלכם גדלה!',
+    nextStage: 'השלב הבא',
+    fullyGrown: 'הגיעה לגודל מלא!',
+    noEggYet: 'עדיין לא בחרתם ביצה.',
+    keepEarningForEgg: 'המשיכו לצבור XP כדי לפתוח את מסך הביצים!',
   },
 } as const;
 
@@ -157,4 +209,81 @@ const categoryLabels: Record<Language, Record<Category, string>> = {
 
 export function categoryLabel(lang: Language, category: Category): string {
   return categoryLabels[lang][category];
+}
+
+// ---- Seed content translation ------------------------------------------
+// Challenge/reward/badge *content* (not UI chrome) is still English-authored
+// (see README), except for the small set of seed items translated here.
+// Rule: a challenge whose subject *is* English (category 'english' — the
+// spelling/vocabulary quiz) stays English end-to-end rather than mixing a
+// Hebrew title onto English quiz content — translating only half of it reads
+// worse than leaving it consistently in one language.
+
+const challengeTitleHe: Record<string, string> = {
+  'Counting Fun': 'כיף בספירה',
+  'Draw & Doodle': 'ציור וקשקוש',
+  'Toy Pickup': 'איסוף צעצועים',
+  'Kind Heart': 'לב טוב',
+  "Today's Discovery": 'הגילוי של היום',
+  'Math Quest': 'משימת חשבון',
+  'Room Rescue': 'הצלת החדר',
+};
+
+const challengeDescriptionHe: Record<string, string> = {
+  'Solve the puzzle! Tap the picture with the right number.': 'פתרו את החידה! הקישו על התמונה עם המספר הנכון.',
+  'Draw anything you like!': 'ציירו מה שבא לכם!',
+  'Put your toys back in the bin!': 'החזירו את הצעצועים לארגז!',
+  'Give someone in your family a big hug today!': 'תנו לבן משפחה חיבוק גדול היום!',
+  'Pick a subject and learn a fun fact!': 'בחרו נושא ולמדו עובדה מעניינת!',
+  'Solve 10 questions to earn Stars!': 'פתרו 10 שאלות כדי להרוויח כוכבים!',
+  'Tidy your room or help with a chore at home.': 'סדרו את החדר או עזרו במטלת בית.',
+  "Do something kind for your sibling today — don’t tell them it was a challenge.":
+    'עשו משהו נחמד לאח או לאחות שלכם היום — בלי לספר להם שזו הייתה משימה.',
+  'Do something kind for someone in your family today.': 'עשו משהו נחמד לבן משפחה היום.',
+};
+
+export function localizeChallengeText(
+  lang: Language,
+  challenge: { title: string; description: string; category: Category },
+): { title: string; description: string } {
+  if (lang === 'en' || challenge.category === 'english') {
+    return { title: challenge.title, description: challenge.description };
+  }
+  return {
+    title: challengeTitleHe[challenge.title] ?? challenge.title,
+    description: challengeDescriptionHe[challenge.description] ?? challenge.description,
+  };
+}
+
+const rewardNameHe: Record<string, string> = {
+  '+30 min screen time': '+30 דקות מסך',
+  'Ice cream treat': 'קינוח גלידה',
+  'Stay up 30 min late': 'להישאר ער 30 דקות נוספות',
+  'Pick family movie night': 'לבחור סרט לערב משפחתי',
+  'Small toy': 'צעצוע קטן',
+  'Family outing': 'טיול משפחתי',
+};
+
+export function localizeRewardName(lang: Language, name: string): string {
+  if (lang === 'en') return name;
+  return rewardNameHe[name] ?? name;
+}
+
+const badgeHe: Record<string, { name: string; description: string }> = {
+  'first-quest': { name: 'המשימה הראשונה', description: 'השלימו את המשימה הראשונה שלכם.' },
+  'quiz-master': { name: 'אלוף החידונים', description: 'השלימו 5 משימות.' },
+  'kindness-hero': { name: 'גיבור טוב הלב', description: 'השלימו 20 משימות טוב לב.' },
+  'home-hero': { name: 'גיבור הבית', description: 'השלימו 30 משימות בית.' },
+  'math-master': { name: 'אלוף החשבון', description: 'השלימו 25 משימות חשבון.' },
+  'quest-champion': { name: 'אלוף המשימות', description: 'השלימו 50 משימות בסך הכול.' },
+};
+
+export function localizeBadge(lang: Language, badge: { id: string; name: string; description: string }): { name: string; description: string } {
+  if (lang === 'en') return { name: badge.name, description: badge.description };
+  const tr = badgeHe[badge.id];
+  return tr ?? { name: badge.name, description: badge.description };
+}
+
+export function localizeItemName(lang: Language, item: { name: string; nameHe: string }): string {
+  return lang === 'he' ? item.nameHe : item.name;
 }

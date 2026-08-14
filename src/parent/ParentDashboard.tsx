@@ -40,58 +40,84 @@ function QuizAnswerDetails({ completion }: { completion: ChallengeCompletion }) 
 function AdjustBalanceCard() {
   const { state, dispatch } = useStore();
   const [childId, setChildId] = useState(state.children[0]?.id ?? '');
-  const [stars, setStars] = useState(0);
-  const [xp, setXp] = useState(0);
+  const child = state.children.find((c) => c.id === childId);
+  const [stars, setStars] = useState<string>(String(child?.stars ?? 0));
+  const [xp, setXp] = useState<string>(String(child?.xp ?? 0));
   const [reason, setReason] = useState('');
   const [saved, setSaved] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!childId || (stars === 0 && xp === 0)) return;
-    dispatch({ type: 'ADJUST_STARS', childId, amount: stars, xpAmount: xp, reason: reason.trim() || 'Manual adjustment' });
-    setStars(0);
-    setXp(0);
+  function selectChild(id: string) {
+    setChildId(id);
+    const c = state.children.find((ch) => ch.id === id);
+    setStars(String(c?.stars ?? 0));
+    setXp(String(c?.xp ?? 0));
+  }
+
+  function applyBalance(newStars: number, newXp: number, reasonText: string) {
+    if (!childId) return;
+    dispatch({ type: 'SET_BALANCE', childId, stars: newStars, xp: newXp, reason: reasonText || 'Manual adjustment' });
+    setStars(String(newStars));
+    setXp(String(newXp));
     setReason('');
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
   }
 
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const starsNum = Number(stars);
+    const xpNum = Number(xp);
+    if (!childId || Number.isNaN(starsNum) || Number.isNaN(xpNum)) return;
+    applyBalance(starsNum, xpNum, reason.trim());
+  }
+
+  function handleReset() {
+    if (!childId || !child) return;
+    if (!confirm(`Reset ${child.name}'s Stars and XP to 0? This cannot be undone.`)) return;
+    applyBalance(0, 0, 'Reset by parent');
+  }
+
   return (
     <div className="card child-summary-card">
       <div className="section-title" style={{ marginBottom: 8 }}>
-        Adjust Stars / XP
+        Set Stars / XP Balance
       </div>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label className="form-label">Child</label>
-          <select className="form-select" value={childId} onChange={(e) => setChildId(e.target.value)}>
+          <select className="form-select" value={childId} onChange={(e) => selectChild(e.target.value)}>
             {state.children.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}
+                {c.name} (⭐ {c.stars} · ⚡ {c.xp} XP)
               </option>
             ))}
           </select>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Stars (+/-)</label>
-            <input className="form-input" type="number" value={stars} onChange={(e) => setStars(Number(e.target.value))} />
+            <label className="form-label">Stars</label>
+            <input className="form-input" type="number" value={stars} onChange={(e) => setStars(e.target.value)} />
           </div>
           <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">XP (+/-)</label>
-            <input className="form-input" type="number" value={xp} onChange={(e) => setXp(Number(e.target.value))} />
+            <label className="form-label">XP</label>
+            <input className="form-input" type="number" value={xp} onChange={(e) => setXp(e.target.value)} />
           </div>
         </div>
         <div className="form-group">
           <label className="form-label">Reason (optional)</label>
           <input className="form-input" placeholder="e.g. extra help around the house" value={reason} onChange={(e) => setReason(e.target.value)} />
         </div>
-        <button className="btn btn-accent" type="submit">
-          {saved ? 'Applied!' : 'Apply'}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-accent" type="submit">
+            {saved ? 'Applied!' : 'Save Balance'}
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={handleReset}>
+            Reset to 0
+          </button>
+        </div>
       </form>
       <div className="empty-state" style={{ padding: 0, marginTop: 10, textAlign: 'start' }}>
-        Use negative numbers to correct a mistake. Every change is recorded in that child's transaction history.
+        This sets the child's exact balance (not a +/- adjustment) — enter 0 to zero it out. Every change is recorded in that child's transaction history.
       </div>
     </div>
   );

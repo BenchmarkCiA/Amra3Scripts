@@ -2,9 +2,9 @@ import type { Badge, Challenge, Child, QuizQuestion, Reward } from '../types';
 import { makeId } from '../lib/id';
 
 export const defaultChildren: Child[] = [
-  { id: 'mia', name: 'Mia', age: 5, avatarTheme: 'mia', accentColor: '#df66b8', readingLevel: 'non-reader', stars: 0, xp: 0 },
-  { id: 'sam', name: 'Sam', age: 11, avatarTheme: 'sam', accentColor: '#33ba9d', readingLevel: 'fluent', stars: 0, xp: 0 },
-  { id: 'alex', name: 'Alex', age: 13, avatarTheme: 'alex', accentColor: '#6c7bf0', readingLevel: 'fluent', stars: 0, xp: 0 },
+  { id: 'mia', name: 'Mia', age: 5, avatarTheme: 'mia', accentColor: '#df66b8', readingLevel: 'non-reader', stars: 0, xp: 0, equippedFamily: null },
+  { id: 'sam', name: 'Sam', age: 11, avatarTheme: 'sam', accentColor: '#33ba9d', readingLevel: 'fluent', stars: 0, xp: 0, equippedFamily: null },
+  { id: 'alex', name: 'Alex', age: 13, avatarTheme: 'alex', accentColor: '#6c7bf0', readingLevel: 'fluent', stars: 0, xp: 0, equippedFamily: null },
 ];
 
 // 30-question rotating pools per subject/kid (up from a fixed 10) — see
