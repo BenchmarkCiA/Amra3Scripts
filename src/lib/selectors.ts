@@ -1,6 +1,5 @@
 import type { AppState } from '../state/store';
 import type { Category, Challenge, ChallengeCompletion } from '../types';
-import { seededSubset } from './seededRandom';
 
 export function isChallengeScheduledToday(challenge: Challenge, dateISO: string, weekday: number): boolean {
   if (!challenge.active) return false;
@@ -10,30 +9,21 @@ export function isChallengeScheduledToday(challenge: Challenge, dateISO: string,
   return false;
 }
 
-// A child with more scheduled challenges than this only sees a deterministic
-// daily subset — same seeded-shuffle technique as the quiz question pools
-// (src/lib/dailyQuiz.ts), just applied to *which challenges* show today
-// instead of *which questions* within one. Kids with a normal-sized list
-// (e.g. 5 challenges) are completely unaffected — this only kicks in once a
-// child has enough content that showing everything at once would be
-// overwhelming (PRD Age-5 content: "not all categories need to appear every
-// day... the system should rotate them").
-const MAX_DAILY_CHALLENGES = 7;
-
-export function pickDailyChallenges(scheduled: Challenge[], childId: string, dateISO: string): Challenge[] {
-  return seededSubset(scheduled, `daily-challenges-${childId}-${dateISO}`, MAX_DAILY_CHALLENGES);
-}
-
 export interface TodayItem {
   challenge: Challenge;
   completion: ChallengeCompletion | null;
 }
 
+// What a child sees today is exactly their active, scheduled challenges —
+// no automatic rotation/hiding. A parent who wants to trim a long list uses
+// Parent → Challenges to pause/activate individual ones per child, and that
+// choice sticks until they change it again (rather than the app silently
+// picking a different random subset each day, which a parent has no way to
+// see or control).
 export function getTodayItemsForChild(state: AppState, childId: string, dateISO: string): TodayItem[] {
   const weekday = new Date(dateISO + 'T00:00:00Z').getUTCDay();
   const scheduled = state.challenges.filter((c) => c.assignedTo.includes(childId) && isChallengeScheduledToday(c, dateISO, weekday));
-  const relevant = pickDailyChallenges(scheduled, childId, dateISO);
-  return relevant.map((challenge) => {
+  return scheduled.map((challenge) => {
     const completion =
       state.completions.find((c) => c.challengeId === challenge.id && c.childId === childId && c.date === dateISO) ?? null;
     return { challenge, completion };

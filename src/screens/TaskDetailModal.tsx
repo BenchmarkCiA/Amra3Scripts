@@ -20,6 +20,7 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
   const reward = computeReward(state.scoringConfig, challenge.difficulty, challenge.category);
   const localized = localizeChallengeText(lang, challenge);
   const [submitted, setSubmitted] = useState(false);
+  const [justCompleted, setJustCompleted] = useState(false);
   const [note, setNote] = useState('');
   const helpingOthers = isHelpingOthers(challenge.category);
   // A different 10-question subset of the challenge's full pool each day,
@@ -35,7 +36,11 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
       setSubmitted(true);
       setTimeout(onClose, 1300);
     } else {
-      onClose();
+      // A brief, visible "done!" moment — closing instantly with zero
+      // feedback reads as broken ("nothing happened") even though the
+      // completion went through.
+      setJustCompleted(true);
+      setTimeout(onClose, 1300);
     }
   }
 
@@ -59,15 +64,25 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
           <div className="reward-preview">⭐ +{reward.stars} · ⚡ +{reward.xp} XP — {reward.bonusPct}% helping-others bonus!</div>
         )}
 
-        {challenge.kind === 'quiz' && dailyQuestions.length > 0 && (
+        {justCompleted && (
+          <div style={{ textAlign: 'center', padding: '10px 0' }}>
+            <div style={{ fontSize: 40 }}>🎉</div>
+            <div className="feedback-msg right">{t(lang, 'niceWork')}</div>
+            <div className="reward-preview">
+              +{reward.stars} ⭐ · +{reward.xp} XP
+            </div>
+          </div>
+        )}
+
+        {!justCompleted && challenge.kind === 'quiz' && dailyQuestions.length > 0 && (
           <QuizBody questions={dailyQuestions} reward={reward} lang={lang} onFinish={handleQuizFinish} onAllDone={onClose} />
         )}
 
-        {challenge.kind === 'draw' && <DrawBody onDone={() => handleMarkComplete()} lang={lang} />}
+        {!justCompleted && challenge.kind === 'draw' && <DrawBody onDone={() => handleMarkComplete()} lang={lang} />}
 
-        {challenge.kind === 'memory' && challenge.memorySymbols && (
+        {!justCompleted && challenge.kind === 'memory' && (
           <MemoryBody
-            symbols={challenge.memorySymbols}
+            symbols={challenge.memorySymbols && challenge.memorySymbols.length > 0 ? challenge.memorySymbols : DEFAULT_MEMORY_SYMBOLS}
             difficulty={challenge.difficulty}
             seedKey={`${challenge.id}-${childId}-${todayISO()}`}
             lang={lang}
@@ -75,9 +90,9 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
           />
         )}
 
-        {challenge.kind === 'discovery' && <DiscoveryBody onDone={(noteText) => handleMarkComplete(noteText)} lang={lang} />}
+        {!justCompleted && challenge.kind === 'discovery' && <DiscoveryBody onDone={(noteText) => handleMarkComplete(noteText)} lang={lang} />}
 
-        {challenge.kind === 'selfreport' &&
+        {!justCompleted && challenge.kind === 'selfreport' &&
           (submitted ? (
             <div className="feedback-msg right">{t(lang, 'submitWaitingApproval')}</div>
           ) : (
@@ -327,6 +342,11 @@ function DrawBody({ onDone, lang }: { onDone: () => void; lang: Parameters<typeo
 // Card count per difficulty follows the PRD's 6/10/14/16/20-card progression
 // (expressed here as pairs, since a "card" is one face of a pair).
 const MEMORY_PAIRS_BY_DIFFICULTY: Record<number, number> = { 1: 3, 2: 5, 3: 7, 4: 8, 5: 10 };
+
+// Fallback so a memory challenge can never render as an empty modal — used
+// whenever a challenge is missing its own symbol pool (e.g. one created by
+// hand without setting it).
+const DEFAULT_MEMORY_SYMBOLS = ['🍎', '🐶', '⭐', '🚗', '🎈', '🌈', '🐱', '🎁', '🍭', '⚽'];
 
 interface MemoryCard {
   key: string;

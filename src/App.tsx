@@ -5,6 +5,7 @@ import { KidApp } from './screens/KidApp';
 import { ParentGate } from './parent/ParentGate';
 import { ParentApp } from './parent/ParentApp';
 import { StarField } from './components/StarField';
+import { ExitConfirmModal } from './components/ExitConfirmModal';
 import { isRTL } from './lib/i18n';
 import { useExitGuard } from './lib/useExitGuard';
 
@@ -13,16 +14,16 @@ type View = { mode: 'picker' } | { mode: 'kid'; childId: string } | { mode: 'par
 function AppShell() {
   const { state, loading } = useStore();
   const [view, setView] = useState<View>({ mode: 'picker' });
+  const { showConfirm, confirmExit, cancelExit } = useExitGuard();
 
   useEffect(() => {
     document.documentElement.lang = state.language;
     document.documentElement.dir = isRTL(state.language) ? 'rtl' : 'ltr';
   }, [state.language]);
 
-  useExitGuard(state.language);
-
+  let content;
   if (loading) {
-    return (
+    content = (
       <div className="app-shell theme-parent">
         <div className="app-frame">
           <StarField />
@@ -33,22 +34,26 @@ function AppShell() {
         </div>
       </div>
     );
+  } else if (view.mode === 'kid') {
+    content = <KidApp childId={view.childId} onSwitchProfile={() => setView({ mode: 'picker' })} />;
+  } else if (view.mode === 'parent-gate') {
+    content = <ParentGate onUnlock={() => setView({ mode: 'parent' })} onBack={() => setView({ mode: 'picker' })} />;
+  } else if (view.mode === 'parent') {
+    content = <ParentApp onBack={() => setView({ mode: 'picker' })} />;
+  } else {
+    content = (
+      <ProfilePicker
+        onPickChild={(childId) => setView({ mode: 'kid', childId })}
+        onParent={() => setView({ mode: 'parent-gate' })}
+      />
+    );
   }
 
-  if (view.mode === 'kid') {
-    return <KidApp childId={view.childId} onSwitchProfile={() => setView({ mode: 'picker' })} />;
-  }
-  if (view.mode === 'parent-gate') {
-    return <ParentGate onUnlock={() => setView({ mode: 'parent' })} onBack={() => setView({ mode: 'picker' })} />;
-  }
-  if (view.mode === 'parent') {
-    return <ParentApp onBack={() => setView({ mode: 'picker' })} />;
-  }
   return (
-    <ProfilePicker
-      onPickChild={(childId) => setView({ mode: 'kid', childId })}
-      onParent={() => setView({ mode: 'parent-gate' })}
-    />
+    <>
+      {content}
+      {showConfirm && <ExitConfirmModal lang={state.language} onStay={cancelExit} onExit={confirmExit} />}
+    </>
   );
 }
 

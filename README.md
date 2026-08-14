@@ -214,14 +214,18 @@ it's almost certainly in `src/lib/supabaseSync.ts` or `supabaseClient.ts`.
   tabs showing overlapping data — Home now shows the full daily list directly, and
   the Quests tab/screen is gone (`KidQuests.tsx` deleted, `TabBar`'s `KidScreen`
   type dropped `'quests'`).
-- **Exit confirmation** (`src/lib/useExitGuard.ts`): a phone's back button/gesture
-  used to exit the page outright on the very first press, since the app has no
-  router history entries of its own — silently losing whatever quest was open. A
-  small history-guard hook (push one extra history entry on mount; a `popstate`
-  event means the user pressed back; ask via `confirm()`; canceling re-arms the
-  guard) now intercepts every back press with "Exit Family Quest?" before anything
-  is lost. Verified with Playwright: pressing back shows the dialog, canceling
-  keeps the app mounted.
+- **Exit confirmation** (`src/lib/useExitGuard.ts` + `src/components/ExitConfirmModal.tsx`):
+  a phone's back button/gesture used to exit the page outright on the very first
+  press, since the app has no router history entries of its own — silently losing
+  whatever quest was open. A small history-guard hook (push one extra history
+  entry on mount; a `popstate` event means the user pressed back; re-arm the guard
+  immediately in case of a rapid second press) now intercepts every back press.
+  The confirmation itself is an in-app modal styled like the rest of the app
+  (dark card, rounded corners, Stay/Exit buttons) rather than the browser's native
+  `confirm()` dialog — the hook exposes `{ showConfirm, confirmExit, cancelExit }`
+  as React state instead of blocking synchronously, so the modal renders through
+  the normal component tree. Verified with Playwright: pressing back shows the
+  themed modal (not a native browser dialog), canceling keeps the app mounted.
 - **Set Stars/XP to an exact balance** — see Parent Dashboard bullet above; fixes
   a bug where typing `0` did nothing (it was interpreted as "+0", not "set to 0").
 - **A real division-answer bug in Sam's original math batch** was found and fixed:
@@ -261,15 +265,38 @@ it's almost certainly in `src/lib/supabaseSync.ts` or `supabaseClient.ts`.
     `selfreport` challenges — no new engine work, just content.
   - *Kindness*: kept the existing "Kind Heart" and added one more ("Share").
   - *Discovery*: unchanged, already fit the spec well.
-  - **Daily rotation** (`pickDailyChallenges` in `src/lib/selectors.ts`): with
-    ~32 challenges now assigned to one 5-year-old, showing all of them at once
-    would be exactly what the spec warns against ("not all categories need to
-    appear every day... the system should rotate them"). Any child with more than
-    7 scheduled challenges now sees a deterministic daily subset of 7, reusing the
-    same seeded-shuffle technique as quiz-question rotation
-    (`src/lib/seededRandom.ts`, factored out of `dailyQuiz.ts` so both can share
-    it) keyed on `(childId, date)`. Sam and Alex have 5 each, so they're
-    unaffected — every one of their challenges still shows every day.
+  - **No automatic rotation — manual parent control instead.** The first version
+    of this feature auto-picked a random daily subset of 7 challenges once a kid
+    had more than 7 (seeded by `childId`+date, same technique as quiz-question
+    rotation). In practice this meant the parent had no visibility into or control
+    over which quests would show up on a given day, which is a worse experience
+    than just... showing all of them and letting a parent trim the list — so it
+    was removed (`getTodayItemsForChild` now shows every active scheduled
+    challenge, full stop). A child with more challenges just has a longer daily
+    list until a parent prunes it via Parent → Manage Quests (see below).
+- **Parent → Manage Quests** (`ParentChallengeList.tsx`, was "All Challenges"):
+  redesigned to group every challenge by the kid it's assigned to, each with a
+  visible on/off checkbox — this is the actual lever for "control what a kid's
+  daily quests are": turning a quest off removes it from that kid's day
+  immediately and *stays* off (it's the same `active` flag as before, just with
+  a UI that makes per-kid curation the primary interaction instead of a flat,
+  ungrouped list). Nothing is deleted (so history/stats are preserved) unless
+  it's a parent-created challenge, which still has an explicit Delete button.
+  This replaces the daily-rotation idea above as the answer to "how do I control
+  what shows up."
+- **Every challenge kind now gives visible completion feedback.** Draw & Doodle
+  and plain self-report tasks (chores, missions, "I Can Do It!") used to close
+  the modal *instantly* on completion with no acknowledgment at all — which,
+  especially for a young child, reads as "nothing happened" / broken, even
+  though the completion was correctly recorded. `TaskDetailModal` now shows a
+  brief "🎉 Nice work! +N ⭐ +N XP" celebration (matching the quiz/memory-game
+  pattern) before closing, for every kind that doesn't already have its own
+  built-in celebration.
+- **Memory game defensive fallback.** If a memory challenge is ever missing its
+  `memorySymbols` (a hand-created one without that field set, or a sync/caching
+  hiccup), `MemoryBody` now falls back to a built-in default symbol set instead
+  of silently rendering nothing — a challenge with this `kind` can no longer open
+  to an empty, unplayable modal.
 
 ## Deliberately deferred (see PRD §39's own "don't build everything at once")
 
