@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Challenge, QuizAnswerDetail, QuizQuestion } from '../types';
+import type { Challenge, DrawGuideShape, DrawPrompt, QuizAnswerDetail, QuizQuestion } from '../types';
 import { useStore } from '../state/store';
 import { CATEGORY_COLOR, computeReward, isHelpingOthers } from '../lib/scoring';
 import { categoryLabel, localizeChallengeText, t } from '../lib/i18n';
 import { factSubjects, randomFact } from '../data/facts';
 import { getDailyQuestions } from '../lib/dailyQuiz';
+import { translateQuizQuestion } from '../lib/translateQuiz';
 import { seededShuffle } from '../lib/seededRandom';
 import { todayISO } from '../lib/id';
 
@@ -75,10 +76,24 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
         )}
 
         {!justCompleted && challenge.kind === 'quiz' && dailyQuestions.length > 0 && (
-          <QuizBody questions={dailyQuestions} reward={reward} lang={lang} onFinish={handleQuizFinish} onAllDone={onClose} />
+          <QuizBody
+            questions={dailyQuestions}
+            category={challenge.category}
+            reward={reward}
+            lang={lang}
+            onFinish={handleQuizFinish}
+            onAllDone={onClose}
+          />
         )}
 
-        {!justCompleted && challenge.kind === 'draw' && <DrawBody onDone={() => handleMarkComplete()} lang={lang} />}
+        {!justCompleted && challenge.kind === 'draw' && (
+          <DrawBody
+            onDone={(note) => handleMarkComplete(note)}
+            lang={lang}
+            prompts={challenge.drawPrompts}
+            seedKey={`${challenge.id}-${childId}-${todayISO()}`}
+          />
+        )}
 
         {!justCompleted && challenge.kind === 'memory' && (
           <MemoryBody
@@ -122,12 +137,14 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
 
 function QuizBody({
   questions,
+  category,
   reward,
   lang,
   onFinish,
   onAllDone,
 }: {
   questions: QuizQuestion[];
+  category: Challenge['category'];
   reward: { stars: number; xp: number };
   lang: Parameters<typeof t>[0];
   onFinish: (correctCount: number, totalQuestions: number, details: QuizAnswerDetail[]) => void;
@@ -214,7 +231,7 @@ function QuizBody({
         {t(lang, 'questionOf')} {index + 1} {t(lang, 'of')} {questions.length}
       </div>
       <div className="modal-desc" style={{ fontWeight: 800, color: 'var(--text-heading)' }}>
-        {question.question}
+        {translateQuizQuestion(lang, category, question.question)}
       </div>
       {question.choices.map((choice, i) => (
         <button key={i} className="choice-btn" onClick={() => handleChoice(i)} disabled={feedback === 'right'}>
@@ -273,9 +290,65 @@ function DiscoveryBody({ onDone, lang }: { onDone: (note: string) => void; lang:
   );
 }
 
-function DrawBody({ onDone, lang }: { onDone: () => void; lang: Parameters<typeof t>[0] }) {
+function drawGuideShape(ctx: CanvasRenderingContext2D, shape: DrawGuideShape) {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  if (shape.type === 'line') {
+    ctx.setLineDash(shape.dashed ? [5, 5] : []);
+    ctx.beginPath();
+    ctx.moveTo(shape.x1, shape.y1);
+    ctx.lineTo(shape.x2, shape.y2);
+    ctx.stroke();
+  } else if (shape.type === 'circle') {
+    ctx.beginPath();
+    ctx.arc(shape.x, shape.y, shape.r, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (shape.type === 'rect') {
+    ctx.strokeRect(shape.x, shape.y, shape.w, shape.h);
+  } else if (shape.type === 'triangle') {
+    ctx.beginPath();
+    ctx.moveTo(shape.x1, shape.y1);
+    ctx.lineTo(shape.x2, shape.y2);
+    ctx.lineTo(shape.x3, shape.y3);
+    ctx.closePath();
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function DrawBody({
+  onDone,
+  lang,
+  prompts,
+  seedKey,
+}: {
+  onDone: (note?: string) => void;
+  lang: Parameters<typeof t>[0];
+  prompts?: DrawPrompt[];
+  seedKey: string;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
+  // A different prompt each day, stable for the day — same pattern as quiz
+  // question rotation. No prompts on the challenge -> plain free draw.
+  const prompt = useMemo(() => {
+    if (!prompts || prompts.length === 0) return null;
+    return seededShuffle(prompts, seedKey)[0];
+  }, [prompts, seedKey]);
+
+  function drawGuide() {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx || !prompt) return;
+    for (const shape of prompt.guide) drawGuideShape(ctx, shape);
+  }
+
+  useEffect(() => {
+    drawGuide();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prompt]);
 
   function getPos(canvas: HTMLCanvasElement, e: React.PointerEvent) {
     const rect = canvas.getBoundingClientRect();
@@ -301,6 +374,7 @@ function DrawBody({ onDone, lang }: { onDone: () => void; lang: Parameters<typeo
     ctx.strokeStyle = '#f4c14f';
     ctx.lineWidth = 4;
     ctx.lineCap = 'round';
+    ctx.setLineDash([]);
     ctx.lineTo(x, y);
     ctx.stroke();
   }
@@ -313,10 +387,16 @@ function DrawBody({ onDone, lang }: { onDone: () => void; lang: Parameters<typeo
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawGuide();
   }
 
   return (
     <div>
+      {prompt && (
+        <div className="quest-reward" style={{ marginBottom: 8 }}>
+          🎨 {lang === 'he' ? prompt.textHe : prompt.text}
+        </div>
+      )}
       <canvas
         ref={canvasRef}
         width={256}
@@ -331,7 +411,7 @@ function DrawBody({ onDone, lang }: { onDone: () => void; lang: Parameters<typeo
         <button className="btn btn-secondary" onClick={handleClear}>
           {t(lang, 'clear')}
         </button>
-        <button className="btn btn-primary" onClick={onDone}>
+        <button className="btn btn-primary" onClick={() => onDone(prompt ? prompt.text : undefined)}>
           {t(lang, 'imDone')}
         </button>
       </div>
@@ -367,14 +447,77 @@ function MemoryBody({
   lang: Parameters<typeof t>[0];
   onDone: (note: string) => void;
 }) {
-  const pairCount = Math.min(MEMORY_PAIRS_BY_DIFFICULTY[difficulty] ?? 3, symbols.length);
+  const defaultPairCount = Math.min(MEMORY_PAIRS_BY_DIFFICULTY[difficulty] ?? 3, symbols.length);
+  const [pairCount, setPairCount] = useState<number | null>(null);
+
+  if (pairCount === null) {
+    return (
+      <MemoryCardCountPicker
+        maxPairs={symbols.length}
+        defaultPairs={defaultPairCount}
+        lang={lang}
+        onChoose={setPairCount}
+      />
+    );
+  }
+
+  return <MemoryBoard symbols={symbols} pairCount={pairCount} seedKey={seedKey} lang={lang} onDone={onDone} />;
+}
+
+function MemoryCardCountPicker({
+  maxPairs,
+  defaultPairs,
+  lang,
+  onChoose,
+}: {
+  maxPairs: number;
+  defaultPairs: number;
+  lang: Parameters<typeof t>[0];
+  onChoose: (pairCount: number) => void;
+}) {
+  const options = Object.values(MEMORY_PAIRS_BY_DIFFICULTY).filter((p, i, arr) => arr.indexOf(p) === i && p <= maxPairs);
+
+  return (
+    <div>
+      <div className="quest-reward" style={{ marginBottom: 8 }}>
+        {t(lang, 'chooseCardCount')}
+      </div>
+      <div className="chip-row" style={{ flexWrap: 'wrap' }}>
+        {options.map((pairs) => (
+          <button
+            key={pairs}
+            type="button"
+            className={`chip${pairs === defaultPairs ? ' selected' : ''}`}
+            onClick={() => onChoose(pairs)}
+          >
+            {pairs * 2} {t(lang, 'cardsLabel')}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MemoryBoard({
+  symbols,
+  pairCount,
+  seedKey,
+  lang,
+  onDone,
+}: {
+  symbols: string[];
+  pairCount: number;
+  seedKey: string;
+  lang: Parameters<typeof t>[0];
+  onDone: (note: string) => void;
+}) {
   const cards = useMemo<MemoryCard[]>(() => {
-    const chosen = seededShuffle(symbols, seedKey).slice(0, pairCount);
+    const chosen = seededShuffle(symbols, `${seedKey}-${pairCount}`).slice(0, pairCount);
     const pairs = chosen.flatMap((symbol, pairId) => [
       { key: `${pairId}-a`, symbol, pairId },
       { key: `${pairId}-b`, symbol, pairId },
     ]);
-    return seededShuffle(pairs, `${seedKey}-board`);
+    return seededShuffle(pairs, `${seedKey}-${pairCount}-board`);
   }, [symbols, pairCount, seedKey]);
 
   const [matched, setMatched] = useState<Set<number>>(new Set());

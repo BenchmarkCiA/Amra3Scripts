@@ -1,5 +1,6 @@
 import type { Badge, Category, Challenge, Child, QuizQuestion, Reward } from '../types';
 import { makeId } from '../lib/id';
+import { drawPrompts } from './drawPrompts';
 
 export const defaultChildren: Child[] = [
   { id: 'mia', name: 'Mia', age: 5, avatarTheme: 'mia', accentColor: '#df66b8', readingLevel: 'non-reader', stars: 0, xp: 0, equippedFamily: null },
@@ -889,7 +890,7 @@ export const defaultChallenges: Challenge[] = [
   {
     id: makeId(),
     title: 'Draw & Doodle',
-    description: 'Draw anything you like!',
+    description: 'Complete the picture!',
     category: 'creative',
     kind: 'draw',
     difficulty: 1,
@@ -897,6 +898,7 @@ export const defaultChallenges: Challenge[] = [
     recurrence: 'daily',
     assignedTo: ['mia'],
     createdBy: 'system',
+    drawPrompts,
     active: true,
     createdAt: new Date().toISOString(),
   },

@@ -30,6 +30,22 @@ export interface QuizQuestion {
   exampleSentence?: string; // English quizzes: a sentence using the correct word
 }
 
+// A drawing prompt's "guide" is a few simple pre-drawn shapes (in a 256x180
+// canvas coordinate space) sketching part of a picture — a house missing
+// windows, one half of a flower — that the child completes by drawing on
+// top. No image assets needed since these are plain vector primitives.
+export type DrawGuideShape =
+  | { type: 'line'; x1: number; y1: number; x2: number; y2: number; dashed?: boolean }
+  | { type: 'circle'; x: number; y: number; r: number }
+  | { type: 'rect'; x: number; y: number; w: number; h: number }
+  | { type: 'triangle'; x1: number; y1: number; x2: number; y2: number; x3: number; y3: number };
+
+export interface DrawPrompt {
+  text: string;
+  textHe: string;
+  guide: DrawGuideShape[];
+}
+
 export interface Challenge {
   id: string;
   title: string;
@@ -43,6 +59,7 @@ export interface Challenge {
   createdBy: 'system' | 'parent';
   quiz?: QuizQuestion[]; // for kind: 'quiz'
   memorySymbols?: string[]; // for kind: 'memory' — emoji pool; difficulty picks how many pairs
+  drawPrompts?: DrawPrompt[]; // for kind: 'draw' — one is picked per day; empty/absent falls back to free draw
   dueDate?: string; // ISO date, for 'once' challenges
   weekday?: number; // 0-6, for 'weekly' challenges
   active: boolean;

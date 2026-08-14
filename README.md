@@ -297,6 +297,40 @@ it's almost certainly in `src/lib/supabaseSync.ts` or `supabaseClient.ts`.
   hiccup), `MemoryBody` now falls back to a built-in default symbol set instead
   of silently rendering nothing — a challenge with this `kind` can no longer open
   to an empty, unplayable modal.
+- **Memory game: child picks the board size.** Opening a memory challenge now
+  shows a "How many cards?" picker (6/10/14/16/20, matching the PRD's
+  progression, capped by however many symbols that challenge actually has) with
+  the difficulty-derived size pre-highlighted — the child can play a shorter or
+  longer game each time instead of always getting the same fixed count.
+- **Draw & Doodle is a guided "complete the picture" prompt, not free draw.**
+  A pool of 8 prompts (`src/data/drawPrompts.ts`) — complete the house's
+  windows, draw the other half of a flower, add the missing wheel, etc. — each
+  pairs instruction text with a `guide` of a few plain vector shapes (lines,
+  circles, rects, triangles in the canvas's coordinate space; no image assets)
+  that pre-render onto the canvas before the child draws on top, and get
+  redrawn if they hit Clear. One prompt is picked per day with the same
+  seeded-daily technique used for quiz rotation. No data model lock-in: a
+  `draw`-kind challenge with no `drawPrompts` set still falls back to plain
+  free draw, so this doesn't force every future drawing challenge to have
+  prompts.
+- **Quiz *question text* is now translated in Hebrew mode, not just the
+  challenge title/description.** The earlier Hebrew pass translated a
+  challenge's title/description but never touched the individual question
+  strings inside `quiz` arrays — so a Hebrew-mode child would see a Hebrew
+  title next to an English question like "How many apples?" or "What is the
+  perimeter of a 3x12 rectangle?". With hundreds of algorithmically-generated
+  questions across Sam/Alex's math and Mia's visual math/Picture Puzzle pools,
+  a per-string translation map (the title/description approach) doesn't scale.
+  `src/lib/translateQuiz.ts` instead recognizes the ~15 sentence *templates*
+  every question was generated from (via regex) and reconstructs the Hebrew
+  phrasing with the original numbers/words substituted in — covers "How many
+  X?", "You eat N, how many left?", bigger/smaller, shape/color questions,
+  percentages, algebra ("Solve: Nx + C = R"), squares/roots, and perimeter.
+  Pure symbol/digit questions ("8 x 3 = ?") needed no translation to begin
+  with since they're already language-neutral. Anything that doesn't match a
+  known template (e.g. a parent-typed custom question) falls back to the
+  original text rather than breaking. The English-vocabulary quizzes (Word
+  Wizard, Word Match) are still correctly exempt end-to-end, unchanged.
 
 ## Deliberately deferred (see PRD §39's own "don't build everything at once")
 
