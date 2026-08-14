@@ -209,6 +209,67 @@ it's almost certainly in `src/lib/supabaseSync.ts` or `supabaseClient.ts`.
   change so far has shipped as an *additive* migration (new columns/rows only) so
   stars, XP, and history survive app updates — see `apply_migration` calls referenced
   in commit history rather than any destructive `DROP`/table rebuild.
+- Home and Quests are one screen. There was no real reason for "today's top 4
+  quests with a link to see the rest" and "the full quest list" to be two separate
+  tabs showing overlapping data — Home now shows the full daily list directly, and
+  the Quests tab/screen is gone (`KidQuests.tsx` deleted, `TabBar`'s `KidScreen`
+  type dropped `'quests'`).
+- **Exit confirmation** (`src/lib/useExitGuard.ts`): a phone's back button/gesture
+  used to exit the page outright on the very first press, since the app has no
+  router history entries of its own — silently losing whatever quest was open. A
+  small history-guard hook (push one extra history entry on mount; a `popstate`
+  event means the user pressed back; ask via `confirm()`; canceling re-arms the
+  guard) now intercepts every back press with "Exit Family Quest?" before anything
+  is lost. Verified with Playwright: pressing back shows the dialog, canceling
+  keeps the app mounted.
+- **Set Stars/XP to an exact balance** — see Parent Dashboard bullet above; fixes
+  a bug where typing `0` did nothing (it was interpreted as "+0", not "set to 0").
+- **A real division-answer bug in Sam's original math batch** was found and fixed:
+  8 questions (e.g. "63 / 7 = ?") had `correctIndex` pointing at the *divisor*
+  instead of the quotient — sometimes the true answer wasn't even among the
+  choices. This was hand-authored content from before the pool-expansion pass
+  started running automated correctness checks, so it had never been re-verified.
+  Fixed locally and live via a full-pool correctness sweep (every question format
+  in `defaults.ts` re-parsed and its stated answer recomputed independently) that
+  now reports 0 errors across all 598 math questions — worth re-running
+  (`scratchpad`-style verify script, not checked into the repo) after any future
+  hand-authored batch, not just generated ones.
+- **Age-5 content overhaul** (PRD "XP Character, Egg & Age-5 Content System" spec,
+  §25-34) — Mia went from 5 daily challenges to ~32, spanning all 9 spec
+  categories, reusing existing engine primitives wherever the content fit rather
+  than building bespoke UI for each category:
+  - *Math* ("Counting Fun"): the original 198-question plain-digit pool gained 46
+    visual/emoji questions (counting, addition/subtraction with pictures,
+    bigger/smaller, number sequences, shape ID) appended on top — additive, so
+    both styles now rotate in daily (244 total).
+  - *English* ("Word Match", new): word-to-picture matching, missing-letter,
+    first-letter, and color-vocabulary questions — all expressed as ordinary quiz
+    questions with emoji/letter choices, no new UI needed. Like Word Wizard, this
+    stays English end-to-end regardless of UI language (category `'english'`).
+  - *Creative* ("Picture Puzzle", new): pattern completion, color-the-shape, and
+    counting-to-match, also as ordinary quiz questions — sits alongside the
+    existing free-draw "Draw & Doodle," doesn't replace it.
+  - *Memory* (new `ChallengeKind: 'memory'`, `MemoryBody` in
+    `TaskDetailModal.tsx`): a real card-flip matching-pairs mini-game, board size
+    from `difficulty` (3-10 pairs, i.e. 6-20 cards, matching the spec's
+    progression), symbols on the challenge (`memorySymbols`), attempts tracked
+    and saved as the completion note.
+  - *Explorer* (6 challenges, new category), *Movement* (6, category `physical`),
+    *Life Skills* (6, new category `lifeskills`, positively framed as "I Can Do
+    It!" — this also absorbed and renamed the old single "Toy Pickup" chore), and
+    *Daily Adventure* (6, new category `adventure`) are all plain honor-system
+    `selfreport` challenges — no new engine work, just content.
+  - *Kindness*: kept the existing "Kind Heart" and added one more ("Share").
+  - *Discovery*: unchanged, already fit the spec well.
+  - **Daily rotation** (`pickDailyChallenges` in `src/lib/selectors.ts`): with
+    ~32 challenges now assigned to one 5-year-old, showing all of them at once
+    would be exactly what the spec warns against ("not all categories need to
+    appear every day... the system should rotate them"). Any child with more than
+    7 scheduled challenges now sees a deterministic daily subset of 7, reusing the
+    same seeded-shuffle technique as quiz-question rotation
+    (`src/lib/seededRandom.ts`, factored out of `dailyQuiz.ts` so both can share
+    it) keyed on `(childId, date)`. Sam and Alex have 5 each, so they're
+    unaffected — every one of their challenges still shows every day.
 
 ## Deliberately deferred (see PRD §39's own "don't build everything at once")
 
@@ -239,17 +300,11 @@ weren't part of this pass:
   `src/data/characters.ts` and one additive migration — there's no art pipeline, so
   new items are emoji-based like the existing ones, consistent with the rest of the
   app's visual style).
-- **Age-5 content category overhaul** (spec sections 25-34: Complete-the-Picture
-  creative challenges, visual/picture-based math and English, a memory-card game,
-  off-screen Explorer missions, gamified Movement missions, an "I Can Do It!"
-  life-skills category, and a rotating Daily Adventure) — not built this pass. This
-  is genuinely a separate, comparably-sized effort (new challenge kinds, a memory-game
-  engine, off-screen-mission approval flows) from the XP Shop system above, and the
-  spec's own repeated guidance is "don't build everything at once" — this pass
-  prioritized the XP Shop since that's what was explicitly asked for. Mia's existing
-  daily challenges (Counting Fun, Draw & Doodle, Toy Pickup, Kind Heart, Discovery)
-  are unchanged and still age-appropriate; they just don't yet reflect the richer
-  9-category structure the spec describes.
+- **Age-5 content category overhaul — now built** (spec sections 25-34). See
+  "What's implemented" below for the full breakdown. Not carried over from the
+  spec: audio narration / icon-only input (still text, though minimal), and the
+  Explorer/Movement/Adventure missions are honor-system (no photo proof) like the
+  rest of the app's selfreport challenges.
 - Non-Reader Mode audio/icon-only presentation for Mia (PRD §6) — the age-appropriate
   seed content is there, but there's no text-to-speech or icon-only input yet.
 - Adaptive difficulty (PRD §31) — difficulty is currently parent-set per challenge.

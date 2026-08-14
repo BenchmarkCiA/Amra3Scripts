@@ -5,6 +5,7 @@ import { CATEGORY_COLOR, computeReward, isHelpingOthers } from '../lib/scoring';
 import { categoryLabel, localizeChallengeText, t } from '../lib/i18n';
 import { factSubjects, randomFact } from '../data/facts';
 import { getDailyQuestions } from '../lib/dailyQuiz';
+import { seededShuffle } from '../lib/seededRandom';
 import { todayISO } from '../lib/id';
 
 interface Props {
@@ -63,6 +64,16 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
         )}
 
         {challenge.kind === 'draw' && <DrawBody onDone={() => handleMarkComplete()} lang={lang} />}
+
+        {challenge.kind === 'memory' && challenge.memorySymbols && (
+          <MemoryBody
+            symbols={challenge.memorySymbols}
+            difficulty={challenge.difficulty}
+            seedKey={`${challenge.id}-${childId}-${todayISO()}`}
+            lang={lang}
+            onDone={(note) => handleMarkComplete(note)}
+          />
+        )}
 
         {challenge.kind === 'discovery' && <DiscoveryBody onDone={(noteText) => handleMarkComplete(noteText)} lang={lang} />}
 
@@ -309,6 +320,103 @@ function DrawBody({ onDone, lang }: { onDone: () => void; lang: Parameters<typeo
           {t(lang, 'imDone')}
         </button>
       </div>
+    </div>
+  );
+}
+
+// Card count per difficulty follows the PRD's 6/10/14/16/20-card progression
+// (expressed here as pairs, since a "card" is one face of a pair).
+const MEMORY_PAIRS_BY_DIFFICULTY: Record<number, number> = { 1: 3, 2: 5, 3: 7, 4: 8, 5: 10 };
+
+interface MemoryCard {
+  key: string;
+  symbol: string;
+  pairId: number;
+}
+
+function MemoryBody({
+  symbols,
+  difficulty,
+  seedKey,
+  lang,
+  onDone,
+}: {
+  symbols: string[];
+  difficulty: number;
+  seedKey: string;
+  lang: Parameters<typeof t>[0];
+  onDone: (note: string) => void;
+}) {
+  const pairCount = Math.min(MEMORY_PAIRS_BY_DIFFICULTY[difficulty] ?? 3, symbols.length);
+  const cards = useMemo<MemoryCard[]>(() => {
+    const chosen = seededShuffle(symbols, seedKey).slice(0, pairCount);
+    const pairs = chosen.flatMap((symbol, pairId) => [
+      { key: `${pairId}-a`, symbol, pairId },
+      { key: `${pairId}-b`, symbol, pairId },
+    ]);
+    return seededShuffle(pairs, `${seedKey}-board`);
+  }, [symbols, pairCount, seedKey]);
+
+  const [matched, setMatched] = useState<Set<number>>(new Set());
+  const [flipped, setFlipped] = useState<number[]>([]); // indices into `cards`
+  const [attempts, setAttempts] = useState(0);
+  const doneRef = useRef(false);
+
+  useEffect(() => {
+    if (flipped.length !== 2) return;
+    const [a, b] = flipped;
+    const isMatch = cards[a].pairId === cards[b].pairId;
+    const timer = setTimeout(
+      () => {
+        if (isMatch) setMatched((prev) => new Set(prev).add(cards[a].pairId));
+        setFlipped([]);
+      },
+      isMatch ? 500 : 900,
+    );
+    setAttempts((n) => n + 1);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flipped]);
+
+  const allMatched = matched.size === pairCount;
+
+  useEffect(() => {
+    if (!allMatched || doneRef.current) return;
+    doneRef.current = true;
+    const timer = setTimeout(() => onDone(`Matched all ${pairCount} pairs in ${attempts} tries.`), 900);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allMatched]);
+
+  function handleFlip(index: number) {
+    if (flipped.length === 2 || flipped.includes(index) || matched.has(cards[index].pairId)) return;
+    setFlipped((prev) => [...prev, index]);
+  }
+
+  const columns = pairCount <= 5 ? 3 : 4;
+
+  return (
+    <div>
+      <div className="quest-reward" style={{ marginBottom: 8 }}>
+        {t(lang, 'memoryAttempts')}: {attempts}
+      </div>
+      <div className="memory-grid" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
+        {cards.map((card, i) => {
+          const isFlipped = flipped.includes(i) || matched.has(card.pairId);
+          return (
+            <button
+              key={card.key}
+              type="button"
+              className={`memory-card${isFlipped ? ' flipped' : ''}${matched.has(card.pairId) ? ' matched' : ''}`}
+              onClick={() => handleFlip(i)}
+              disabled={isFlipped}
+            >
+              {isFlipped ? card.symbol : '❓'}
+            </button>
+          );
+        })}
+      </div>
+      {allMatched && <div className="feedback-msg right" style={{ marginTop: 10 }}>🎉 {t(lang, 'memoryDone')}</div>}
     </div>
   );
 }

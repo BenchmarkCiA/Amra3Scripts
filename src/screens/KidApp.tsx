@@ -4,7 +4,6 @@ import { StarField } from '../components/StarField';
 import { TopBar } from '../components/TopBar';
 import { TabBar, type KidScreen } from '../components/TabBar';
 import { KidHome } from './KidHome';
-import { KidQuests } from './KidQuests';
 import { RewardShop } from './RewardShop';
 import { XpShop } from './XpShop';
 import { StreaksBadges } from './StreaksBadges';
@@ -38,10 +37,7 @@ export function KidApp({ childId, onSwitchProfile }: Props) {
         </div>
         <TopBar stars={child.stars} lang={lang} />
         <div className="screen-content">
-          {screen === 'home' && (
-            <KidHome child={child} onOpenTask={setActiveTaskId} onSeeAll={() => setScreen('quests')} />
-          )}
-          {screen === 'quests' && <KidQuests child={child} onOpenTask={setActiveTaskId} />}
+          {screen === 'home' && <KidHome child={child} onOpenTask={setActiveTaskId} />}
           {screen === 'rewards' && <RewardShop child={child} />}
           {screen === 'shop' && <XpShop child={child} />}
           {screen === 'streaks' && <StreaksBadges child={child} />}

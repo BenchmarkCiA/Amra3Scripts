@@ -375,6 +375,7 @@
   font: 600 14px var(--font-body);
   color: var(--text-muted-65);
   line-height: 1.5;
+  white-space: pre-line;
   margin-bottom: 16px;
 }
 
@@ -389,6 +390,33 @@
   color: var(--text-heading);
   font: 700 14px var(--font-body);
   margin-bottom: 10px;
+}
+
+.memory-grid {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.memory-card {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--card-border);
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.memory-card.flipped {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.memory-card.matched {
+  background: rgba(52, 211, 153, 0.18);
+  border-color: var(--success);
 }
 
 .feedback-msg {

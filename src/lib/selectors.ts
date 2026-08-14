@@ -1,5 +1,6 @@
 import type { AppState } from '../state/store';
 import type { Category, Challenge, ChallengeCompletion } from '../types';
+import { seededSubset } from './seededRandom';
 
 export function isChallengeScheduledToday(challenge: Challenge, dateISO: string, weekday: number): boolean {
   if (!challenge.active) return false;
@@ -9,6 +10,20 @@ export function isChallengeScheduledToday(challenge: Challenge, dateISO: string,
   return false;
 }
 
+// A child with more scheduled challenges than this only sees a deterministic
+// daily subset — same seeded-shuffle technique as the quiz question pools
+// (src/lib/dailyQuiz.ts), just applied to *which challenges* show today
+// instead of *which questions* within one. Kids with a normal-sized list
+// (e.g. 5 challenges) are completely unaffected — this only kicks in once a
+// child has enough content that showing everything at once would be
+// overwhelming (PRD Age-5 content: "not all categories need to appear every
+// day... the system should rotate them").
+const MAX_DAILY_CHALLENGES = 7;
+
+export function pickDailyChallenges(scheduled: Challenge[], childId: string, dateISO: string): Challenge[] {
+  return seededSubset(scheduled, `daily-challenges-${childId}-${dateISO}`, MAX_DAILY_CHALLENGES);
+}
+
 export interface TodayItem {
   challenge: Challenge;
   completion: ChallengeCompletion | null;
@@ -16,7 +31,8 @@ export interface TodayItem {
 
 export function getTodayItemsForChild(state: AppState, childId: string, dateISO: string): TodayItem[] {
   const weekday = new Date(dateISO + 'T00:00:00Z').getUTCDay();
-  const relevant = state.challenges.filter((c) => c.assignedTo.includes(childId) && isChallengeScheduledToday(c, dateISO, weekday));
+  const scheduled = state.challenges.filter((c) => c.assignedTo.includes(childId) && isChallengeScheduledToday(c, dateISO, weekday));
+  const relevant = pickDailyChallenges(scheduled, childId, dateISO);
   return relevant.map((challenge) => {
     const completion =
       state.completions.find((c) => c.challengeId === challenge.id && c.childId === childId && c.date === dateISO) ?? null;

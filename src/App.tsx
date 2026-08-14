@@ -6,6 +6,7 @@ import { ParentGate } from './parent/ParentGate';
 import { ParentApp } from './parent/ParentApp';
 import { StarField } from './components/StarField';
 import { isRTL } from './lib/i18n';
+import { useExitGuard } from './lib/useExitGuard';
 
 type View = { mode: 'picker' } | { mode: 'kid'; childId: string } | { mode: 'parent-gate' } | { mode: 'parent' };
 
@@ -17,6 +18,8 @@ function AppShell() {
     document.documentElement.lang = state.language;
     document.documentElement.dir = isRTL(state.language) ? 'rtl' : 'ltr';
   }, [state.language]);
+
+  useExitGuard(state.language);
 
   if (loading) {
     return (

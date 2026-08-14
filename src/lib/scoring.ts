@@ -65,6 +65,10 @@ export const CATEGORY_LABEL: Record<Category, string> = {
   sibling: 'Sibling',
   family: 'Family',
   creative: 'Creative',
+  memory: 'Memory',
+  explorer: 'Explorer',
+  lifeskills: 'I Can Do It!',
+  adventure: 'Daily Adventure',
 };
 
 export const CATEGORY_COLOR: Record<Category, string> = {
@@ -79,6 +83,10 @@ export const CATEGORY_COLOR: Record<Category, string> = {
   sibling: 'var(--cat-kindness)',
   family: 'var(--cat-family)',
   creative: 'var(--cat-drawing)',
+  memory: 'var(--cat-memory)',
+  explorer: 'var(--cat-explorer)',
+  lifeskills: 'var(--cat-lifeskills)',
+  adventure: 'var(--cat-adventure)',
 };
 
 // Level curve, age-normalized per PRD §16 REVISION NOTE: each child's XP

@@ -9,9 +9,13 @@ export type Category =
   | 'kindness'
   | 'sibling'
   | 'family'
-  | 'creative';
+  | 'creative'
+  | 'memory'
+  | 'explorer'
+  | 'lifeskills'
+  | 'adventure';
 
-export type ChallengeKind = 'quiz' | 'draw' | 'selfreport' | 'discovery';
+export type ChallengeKind = 'quiz' | 'draw' | 'selfreport' | 'discovery' | 'memory';
 
 export type Difficulty = 1 | 2 | 3 | 4 | 5;
 
@@ -38,6 +42,7 @@ export interface Challenge {
   assignedTo: string[]; // child ids
   createdBy: 'system' | 'parent';
   quiz?: QuizQuestion[]; // for kind: 'quiz'
+  memorySymbols?: string[]; // for kind: 'memory' — emoji pool; difficulty picks how many pairs
   dueDate?: string; // ISO date, for 'once' challenges
   weekday?: number; // 0-6, for 'weekly' challenges
   active: boolean;

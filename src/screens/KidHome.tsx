@@ -3,19 +3,19 @@ import { useStore } from '../state/store';
 import { Mascot } from '../components/Mascot';
 import { getTodayItemsForChild, isDone } from '../lib/selectors';
 import { CATEGORY_COLOR, computeReward } from '../lib/scoring';
-import { localizeChallengeText, localizeRewardName, t } from '../lib/i18n';
+import { categoryLabel, localizeChallengeText, localizeRewardName, t } from '../lib/i18n';
 import { todayISO } from '../lib/id';
 
 interface Props {
   child: Child;
   onOpenTask: (challengeId: string) => void;
-  onSeeAll: () => void;
 }
 
-export function KidHome({ child, onOpenTask, onSeeAll }: Props) {
+export function KidHome({ child, onOpenTask }: Props) {
   const { state } = useStore();
   const lang = state.language;
   const items = getTodayItemsForChild(state, child.id, todayISO());
+  const doneCount = items.filter((i) => isDone(i.completion)).length;
 
   const affordableRewards = state.rewards.filter((r) => r.active);
   const nextReward = affordableRewards
@@ -28,7 +28,9 @@ export function KidHome({ child, onOpenTask, onSeeAll }: Props) {
       <div className="screen-header">
         {t(lang, 'hey')} {child.name}
       </div>
-      <div className="screen-subheader">{t(lang, 'questLogToday')}</div>
+      <div className="screen-subheader">
+        {doneCount} {t(lang, 'of')} {items.length} {t(lang, 'doneToday')}
+      </div>
 
       <Mascot child={child} />
 
@@ -48,12 +50,9 @@ export function KidHome({ child, onOpenTask, onSeeAll }: Props) {
 
       <div className="section-row">
         <div className="section-title">{t(lang, 'todaysQuests')}</div>
-        <button className="link" onClick={onSeeAll}>
-          {t(lang, 'seeAll')}
-        </button>
       </div>
       <div className="quest-list">
-        {items.slice(0, 4).map(({ challenge, completion }) => {
+        {items.map(({ challenge, completion }) => {
           const done = isDone(completion);
           const reward = computeReward(state.scoringConfig, challenge.difficulty, challenge.category);
           return (
@@ -63,7 +62,9 @@ export function KidHome({ child, onOpenTask, onSeeAll }: Props) {
               onClick={() => !done && onOpenTask(challenge.id)}
               disabled={done}
             >
-              <span className="quest-dot" style={{ background: CATEGORY_COLOR[challenge.category] }} />
+              <span className="quest-tag" style={{ background: CATEGORY_COLOR[challenge.category] }}>
+                {categoryLabel(lang, challenge.category).toUpperCase()}
+              </span>
               <div className="quest-info">
                 <div className="quest-title">{localizeChallengeText(lang, challenge).title}</div>
                 <div className="quest-reward">

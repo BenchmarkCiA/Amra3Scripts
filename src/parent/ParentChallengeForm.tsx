@@ -16,6 +16,10 @@ const CATEGORIES: Category[] = [
   'kindness',
   'sibling',
   'family',
+  'memory',
+  'explorer',
+  'lifeskills',
+  'adventure',
 ];
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
