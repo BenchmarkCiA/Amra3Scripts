@@ -17,6 +17,7 @@ const CATEGORIES: Category[] = [
   'sibling',
   'family',
   'memory',
+  'logic',
   'explorer',
   'lifeskills',
   'adventure',

@@ -11,11 +11,12 @@ export type Category =
   | 'family'
   | 'creative'
   | 'memory'
+  | 'logic'
   | 'explorer'
   | 'lifeskills'
   | 'adventure';
 
-export type ChallengeKind = 'quiz' | 'draw' | 'selfreport' | 'discovery' | 'memory';
+export type ChallengeKind = 'quiz' | 'draw' | 'selfreport' | 'discovery' | 'memory' | 'bigger' | 'missing';
 
 export type Difficulty = 1 | 2 | 3 | 4 | 5;
 
@@ -60,6 +61,8 @@ export interface Challenge {
   quiz?: QuizQuestion[]; // for kind: 'quiz'
   memorySymbols?: string[]; // for kind: 'memory' — emoji pool; difficulty picks how many pairs
   drawPrompts?: DrawPrompt[]; // for kind: 'draw' — one is picked per day; empty/absent falls back to free draw
+  comparisonIcons?: string[]; // for kind: 'bigger' — icon pool; 2 are shown per round at different sizes
+  missingIcons?: string[]; // for kind: 'missing' — icon pool; 5 shown per round, one hidden
   dueDate?: string; // ISO date, for 'once' challenges
   weekday?: number; // 0-6, for 'weekly' challenges
   active: boolean;

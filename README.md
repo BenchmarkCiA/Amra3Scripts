@@ -331,6 +331,37 @@ it's almost certainly in `src/lib/supabaseSync.ts` or `supabaseClient.ts`.
   known template (e.g. a parent-typed custom question) falls back to the
   original text rather than breaking. The English-vocabulary quizzes (Word
   Wizard, Word Match) are still correctly exempt end-to-end, unchanged.
+- **Counting Fun is icon-only now, no subtraction.** Replaced the pool with
+  126 questions: 60 counting ("🦄🦄🦄 How many unicorns?") and 60 addition
+  ("🐻 + 🐻🐻 = ?"), both drawing from a wide mix of animals, fantasy
+  characters, food and objects (not just fruit), plus the existing 6
+  shape-ID questions. The old plain-digit arithmetic and the digit-based
+  bigger/smaller and number-sequence questions were removed entirely — no
+  subtraction, no bare numbers as the "picture." (Replacing a quiz pool's
+  *content* is safe and doesn't touch history: a completion snapshots its
+  own question/answer data at the time, decoupled from the live pool.)
+- **Two new Age-5 mini-games** (`ChallengeKind: 'bigger' | 'missing'`), both
+  bespoke UI (not the quiz engine, since they need per-icon sizing/layout the
+  quiz format can't express) and both 5 rounds per play-through:
+  - *What's Bigger?* (`BiggerBody`): two icons from a shared pool render at
+    randomly-assigned sizes (one much larger than the other); the child taps
+    whichever one is visually bigger. "Bigger" is simply whichever rendered
+    size the round assigned — no real-world size judgment required, so
+    there's never an ambiguous case (a strawberry rendered larger than a
+    lion is correctly "bigger" for the round).
+  - *What's Missing?* (`MissingBody`): 5 icons show in a reference row, the
+    same 5 show again below with one replaced by a "❓", and the child picks
+    the missing one from 3 answer choices (the correct icon plus 2
+    distractors not shown in the row, so there's no ambiguity about which
+    position is "missing").
+  - Both pick their icons/sizes/blank-position with the same seeded-PRNG
+    technique as quiz rotation, keyed per round (`${seedKey}-${round}`) so
+    a session is internally varied but stable if the child backs out and
+    reopens the same day. New category `logic` (distinct from `memory`,
+    which is specifically the card-matching game) with its own color.
+  - Data lives on the challenge (`comparisonIcons` / `missingIcons`) with a
+    shared default pool (`src/data/iconPools.ts`) as a fallback, same
+    pattern as the memory game's defensive fallback.
 
 ## Deliberately deferred (see PRD §39's own "don't build everything at once")
 

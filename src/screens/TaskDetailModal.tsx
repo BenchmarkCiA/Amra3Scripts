@@ -6,7 +6,8 @@ import { categoryLabel, localizeChallengeText, t } from '../lib/i18n';
 import { factSubjects, randomFact } from '../data/facts';
 import { getDailyQuestions } from '../lib/dailyQuiz';
 import { translateQuizQuestion } from '../lib/translateQuiz';
-import { seededShuffle } from '../lib/seededRandom';
+import { hashString, mulberry32, seededShuffle } from '../lib/seededRandom';
+import { bigIconPool } from '../data/iconPools';
 import { todayISO } from '../lib/id';
 
 interface Props {
@@ -99,6 +100,24 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
           <MemoryBody
             symbols={challenge.memorySymbols && challenge.memorySymbols.length > 0 ? challenge.memorySymbols : DEFAULT_MEMORY_SYMBOLS}
             difficulty={challenge.difficulty}
+            seedKey={`${challenge.id}-${childId}-${todayISO()}`}
+            lang={lang}
+            onDone={(note) => handleMarkComplete(note)}
+          />
+        )}
+
+        {!justCompleted && challenge.kind === 'bigger' && (
+          <BiggerBody
+            icons={challenge.comparisonIcons && challenge.comparisonIcons.length >= 2 ? challenge.comparisonIcons : bigIconPool}
+            seedKey={`${challenge.id}-${childId}-${todayISO()}`}
+            lang={lang}
+            onDone={(note) => handleMarkComplete(note)}
+          />
+        )}
+
+        {!justCompleted && challenge.kind === 'missing' && (
+          <MissingBody
+            icons={challenge.missingIcons && challenge.missingIcons.length >= 8 ? challenge.missingIcons : bigIconPool}
             seedKey={`${challenge.id}-${childId}-${todayISO()}`}
             lang={lang}
             onDone={(note) => handleMarkComplete(note)}
@@ -580,6 +599,223 @@ function MemoryBoard({
         })}
       </div>
       {allMatched && <div className="feedback-msg right" style={{ marginTop: 10 }}>🎉 {t(lang, 'memoryDone')}</div>}
+    </div>
+  );
+}
+
+const GAME_ROUNDS = 5;
+
+function roundRng(seedKey: string, round: number, salt: string) {
+  return mulberry32(hashString(`${seedKey}-${salt}-${round}`));
+}
+
+function BiggerBody({
+  icons,
+  seedKey,
+  lang,
+  onDone,
+}: {
+  icons: string[];
+  seedKey: string;
+  lang: Parameters<typeof t>[0];
+  onDone: (note: string) => void;
+}) {
+  const [round, setRound] = useState(0);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [picked, setPicked] = useState<0 | 1 | null>(null);
+  const [finished, setFinished] = useState(false);
+  const doneRef = useRef(false);
+
+  const roundData = useMemo(() => {
+    const rand = roundRng(seedKey, round, 'bigger');
+    const idxA = Math.floor(rand() * icons.length);
+    let idxB = Math.floor(rand() * icons.length);
+    while (idxB === idxA && icons.length > 1) idxB = Math.floor(rand() * icons.length);
+    const bigIsLeft = rand() < 0.5;
+    const bigSize = 64 + Math.floor(rand() * 28);
+    const smallSize = 26 + Math.floor(rand() * 12);
+    return {
+      left: { icon: icons[idxA], size: bigIsLeft ? bigSize : smallSize },
+      right: { icon: icons[idxB], size: bigIsLeft ? smallSize : bigSize },
+      biggerSide: (bigIsLeft ? 0 : 1) as 0 | 1,
+    };
+  }, [icons, seedKey, round]);
+
+  function handlePick(side: 0 | 1) {
+    if (picked !== null) return;
+    setPicked(side);
+    if (side === roundData.biggerSide) setCorrectCount((c) => c + 1);
+    setTimeout(() => {
+      if (round + 1 < GAME_ROUNDS) {
+        setRound((r) => r + 1);
+        setPicked(null);
+      } else {
+        setFinished(true);
+      }
+    }, 800);
+  }
+
+  useEffect(() => {
+    if (!finished || doneRef.current) return;
+    doneRef.current = true;
+    const timer = setTimeout(() => onDone(`Got ${correctCount}/${GAME_ROUNDS} right in What's Bigger?`), 800);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finished]);
+
+  if (finished) {
+    return (
+      <div style={{ textAlign: 'center', padding: '10px 0' }}>
+        <div style={{ fontSize: 40 }}>🎉</div>
+        <div className="feedback-msg right">
+          {correctCount} / {GAME_ROUNDS}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="quest-reward" style={{ marginBottom: 4 }}>
+        {t(lang, 'roundLabel')} {round + 1} {t(lang, 'of')} {GAME_ROUNDS}
+      </div>
+      <div className="modal-desc" style={{ fontWeight: 800, color: 'var(--text-heading)', marginBottom: 10 }}>
+        {t(lang, 'whichIsBigger')}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', minHeight: 110 }}>
+        {([roundData.left, roundData.right] as const).map((side, i) => (
+          <button
+            key={i}
+            type="button"
+            className="chip"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              fontSize: side.size,
+              lineHeight: 1,
+              padding: 8,
+              opacity: picked !== null && picked !== i ? 0.4 : 1,
+            }}
+            disabled={picked !== null}
+            onClick={() => handlePick(i as 0 | 1)}
+          >
+            {side.icon}
+          </button>
+        ))}
+      </div>
+      {picked !== null && (
+        <div className={`feedback-msg ${picked === roundData.biggerSide ? 'right' : 'wrong'}`}>
+          {picked === roundData.biggerSide ? t(lang, 'correct') : t(lang, 'notQuite')}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MissingBody({
+  icons,
+  seedKey,
+  lang,
+  onDone,
+}: {
+  icons: string[];
+  seedKey: string;
+  lang: Parameters<typeof t>[0];
+  onDone: (note: string) => void;
+}) {
+  const [round, setRound] = useState(0);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [picked, setPicked] = useState<string | null>(null);
+  const [finished, setFinished] = useState(false);
+  const doneRef = useRef(false);
+
+  const roundData = useMemo(() => {
+    const shuffled = seededShuffle(icons, `${seedKey}-missing-${round}`);
+    const rowIcons = shuffled.slice(0, 5);
+    const rand = roundRng(seedKey, round, 'missing-blank');
+    const missingIndex = Math.floor(rand() * 5);
+    const correctIcon = rowIcons[missingIndex];
+    const distractors = shuffled.slice(5, 7);
+    const choices = seededShuffle([correctIcon, ...distractors], `${seedKey}-missing-choices-${round}`);
+    return { rowIcons, missingIndex, correctIcon, choices };
+  }, [icons, seedKey, round]);
+
+  function handlePick(icon: string) {
+    if (picked !== null) return;
+    setPicked(icon);
+    if (icon === roundData.correctIcon) setCorrectCount((c) => c + 1);
+    setTimeout(() => {
+      if (round + 1 < GAME_ROUNDS) {
+        setRound((r) => r + 1);
+        setPicked(null);
+      } else {
+        setFinished(true);
+      }
+    }, 800);
+  }
+
+  useEffect(() => {
+    if (!finished || doneRef.current) return;
+    doneRef.current = true;
+    const timer = setTimeout(() => onDone(`Got ${correctCount}/${GAME_ROUNDS} right in What's Missing?`), 800);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finished]);
+
+  if (finished) {
+    return (
+      <div style={{ textAlign: 'center', padding: '10px 0' }}>
+        <div style={{ fontSize: 40 }}>🎉</div>
+        <div className="feedback-msg right">
+          {correctCount} / {GAME_ROUNDS}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="quest-reward" style={{ marginBottom: 4 }}>
+        {t(lang, 'roundLabel')} {round + 1} {t(lang, 'of')} {GAME_ROUNDS}
+      </div>
+      <div className="modal-desc" style={{ fontWeight: 800, color: 'var(--text-heading)', marginBottom: 10 }}>
+        {t(lang, 'whatsMissing')}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 30, marginBottom: 10 }}>
+        {roundData.rowIcons.map((icon, i) => (
+          <span key={i}>{icon}</span>
+        ))}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 30, marginBottom: 14 }}>
+        {roundData.rowIcons.map((icon, i) =>
+          i === roundData.missingIndex ? (
+            <span key={i} style={{ opacity: 0.4 }}>
+              ❓
+            </span>
+          ) : (
+            <span key={i}>{icon}</span>
+          ),
+        )}
+      </div>
+      <div className="chip-row" style={{ justifyContent: 'center' }}>
+        {roundData.choices.map((icon, i) => (
+          <button
+            key={i}
+            type="button"
+            className={`chip${picked === icon ? (icon === roundData.correctIcon ? ' selected' : '') : ''}`}
+            style={{ fontSize: 26, opacity: picked !== null && picked !== icon ? 0.5 : 1 }}
+            disabled={picked !== null}
+            onClick={() => handlePick(icon)}
+          >
+            {icon}
+          </button>
+        ))}
+      </div>
+      {picked !== null && (
+        <div className={`feedback-msg ${picked === roundData.correctIcon ? 'right' : 'wrong'}`}>
+          {picked === roundData.correctIcon ? t(lang, 'correct') : t(lang, 'notQuite')}
+        </div>
+      )}
     </div>
   );
 }
