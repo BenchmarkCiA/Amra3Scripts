@@ -363,6 +363,55 @@ it's almost certainly in `src/lib/supabaseSync.ts` or `supabaseClient.ts`.
     shared default pool (`src/data/iconPools.ts`) as a fallback, same
     pattern as the memory game's defensive fallback.
 
+- **Animated character avatars + new unicorn/soccer characters.** The XP
+  Shop's "My Character" display and browse tiles now play a gentle idle
+  bounce-and-tilt animation (`character-wiggle` keyframe in `app.css`) so
+  equipped/browsable characters feel alive rather than static emoji. Added a
+  directly XP-unlockable `unicorn-friend` character (age range 3-12) separate
+  from the existing egg-gated unicorn family, since that one caps out at age
+  9 and was unreachable for the 11yo; and two soccer-themed characters
+  (`soccer-player`, `soccer-champion`) for the 13yo.
+- **Toggleable background music.** A soft, slow pentatonic melody
+  synthesized live with the Web Audio API (`src/lib/backgroundMusic.ts`) —
+  deliberately not a bundled/sourced audio file, to sidestep licensing and
+  keep the app self-contained. A floating 🔊/🔇 button (bottom corner, all
+  screens) toggles it; the preference persists in `localStorage` since it's
+  a device setting, not family data that needs to sync.
+- **Memory game: up to 30 cards.** The card-count picker now offers 30 cards
+  (15 pairs) on top of the original 6-20 range; Mia's symbol pool was
+  expanded from 10 to 15 unique symbols so the largest board is actually
+  playable (a board can't have more pairs than distinct symbols).
+- **Sam's English simplified to word-translation only.** Word Wizard's
+  quiz pool for the 11yo was replaced with 30 straightforward "What does
+  '&lt;word&gt;' mean?" questions (English word → Hebrew meaning,
+  multiple-choice) instead of spelling/grammar/synonym questions that were
+  too advanced. The existing "example sentence shown right after the
+  correct answer" mechanic is unchanged. Alex's separate, harder English
+  pool is untouched.
+- **Daily egg-care mini-game.** A cosmetic "Feed 🍎" / "Give a drink 💧"
+  pair of buttons, available once each per child per day, on both the
+  active (unhatched) egg and the equipped hatched character. Pressing
+  either triggers a brief celebratory dance animation (`egg-dance`
+  keyframe). Tracked in `localStorage` per child per day
+  (`src/lib/useEggCare.ts`) since it's flavor, not progress data — no XP or
+  Stars involved.
+- **Parent Stats: review any specific day's wrong answers.** `ParentStats`
+  (the monthly-summary screen) previously only showed an aggregate % correct
+  for the month. Added a per-child date picker ("Review a specific day")
+  that lists that day's scheduled challenges and, for quizzes, exactly which
+  questions were answered wrong and what the correct answer was — reusing
+  the same right/wrong breakdown `ParentDashboard`'s "Today" view already
+  had (now extracted into a shared `QuizAnswerDetails` component), but
+  selectable for any past date, not just today.
+- **Fixed: math equations rendering with the operator on the wrong side in
+  Hebrew mode.** Digits/operators/emoji are "weak"/"neutral" in the Unicode
+  bidi algorithm, so inside an RTL page a plain equation like "🐷🐷 +
+  🐷🐷🐷 = ?" could get visually reordered by the browser. `QuizBody` now
+  forces `dir="ltr"` on the question element specifically when it contains
+  no Hebrew characters (the exact case that's actually affected) — Hebrew
+  instructional/translated text is untouched and still reads correctly
+  right-to-left.
+
 ## Deliberately deferred (see PRD §39's own "don't build everything at once")
 
 These are called out in the PRD itself as v1.5/v2/v3 scope, or need infrastructure

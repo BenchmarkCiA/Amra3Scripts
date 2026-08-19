@@ -6,6 +6,7 @@ import { ParentGate } from './parent/ParentGate';
 import { ParentApp } from './parent/ParentApp';
 import { StarField } from './components/StarField';
 import { ExitConfirmModal } from './components/ExitConfirmModal';
+import { MusicToggleButton } from './components/MusicToggleButton';
 import { isRTL } from './lib/i18n';
 import { useExitGuard } from './lib/useExitGuard';
 
@@ -52,6 +53,7 @@ function AppShell() {
   return (
     <>
       {content}
+      {!loading && <MusicToggleButton lang={state.language} />}
       {showConfirm && <ExitConfirmModal lang={state.language} onStay={cancelExit} onExit={confirmExit} />}
     </>
   );

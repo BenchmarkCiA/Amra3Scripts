@@ -406,37 +406,41 @@ const samMath: QuizQuestion[] = [
   { question: "88 + 46 = ?", choices: ["128", "134", "126"], correctIndex: 1 },
 ];
 
+// Simplified per parent feedback: full grammar/spelling quizzes were too hard
+// for the 11yo. For now this is word-translation only (English word → Hebrew
+// meaning), keeping the existing "example sentence right after the correct
+// answer" mechanic so the word is still seen in context.
 const samEnglish: QuizQuestion[] = [
-  { question: "Which is spelled correctly?", choices: ["Recieve", "Receive", "Receeve"], correctIndex: 1, exampleSentence: "I can't wait to receive my birthday present." },
-  { question: "Which word means \"very happy\"?", choices: ["Furious", "Joyful", "Exhausted"], correctIndex: 1, exampleSentence: "She was joyful when her team won the game." },
-  { question: "Which is spelled correctly?", choices: ["Definately", "Definitely", "Definitly"], correctIndex: 1, exampleSentence: "I'll definitely be there on time." },
-  { question: "Which word means \"to look for\"?", choices: ["Search", "Sell", "Sleep"], correctIndex: 0, exampleSentence: "We had to search the whole house for the missing key." },
-  { question: "Which is spelled correctly?", choices: ["Seperate", "Separate", "Seprate"], correctIndex: 1, exampleSentence: "Please keep the two colors separate." },
-  { question: "What is a synonym for \"big\"?", choices: ["Tiny", "Huge", "Quiet"], correctIndex: 1, exampleSentence: "The elephant was absolutely huge." },
-  { question: "Which word means the opposite of \"brave\"?", choices: ["Fearful", "Bold", "Strong"], correctIndex: 0, exampleSentence: "The fearful kitten hid under the bed." },
-  { question: "Which is spelled correctly?", choices: ["Beleive", "Believe", "Belive"], correctIndex: 1, exampleSentence: "I believe you can do it." },
-  { question: "What is a synonym for \"quick\"?", choices: ["Slow", "Fast", "Heavy"], correctIndex: 1, exampleSentence: "The fast runner won the race easily." },
-  { question: "Which word completes: \"She ___ to the store yesterday\"?", choices: ["go", "goes", "went"], correctIndex: 2, exampleSentence: "She went to the store yesterday." },
-  { question: "Which is spelled correctly?", choices: ["Tommorow", "Tomorrow", "Tommorrow"], correctIndex: 1, exampleSentence: "See you tomorrow morning." },
-  { question: "What is a synonym for \"sad\"?", choices: ["Cheerful", "Miserable", "Excited"], correctIndex: 1, exampleSentence: "He felt miserable after losing the game." },
-  { question: "Which is spelled correctly?", choices: ["Wierd", "Weird", "Weerd"], correctIndex: 1, exampleSentence: "That was a weird dream." },
-  { question: "What is a synonym for \"angry\"?", choices: ["Furious", "Calm", "Sleepy"], correctIndex: 0, exampleSentence: "She was furious when she saw the mess." },
-  { question: "Which is spelled correctly?", choices: ["Accomodate", "Accommodate", "Acommodate"], correctIndex: 1, exampleSentence: "The hotel can accommodate ten guests." },
-  { question: "What is the opposite of \"difficult\"?", choices: ["Easy", "Hard", "Complicated"], correctIndex: 0, exampleSentence: "The quiz was easy for her." },
-  { question: "Which word completes: \"He ___ his homework before dinner\"?", choices: ["finish", "finished", "finishing"], correctIndex: 1, exampleSentence: "He finished his homework before dinner." },
-  { question: "Which is spelled correctly?", choices: ["Immediatly", "Immediately", "Imediately"], correctIndex: 1, exampleSentence: "Please come here immediately." },
-  { question: "What is a synonym for \"smart\"?", choices: ["Clever", "Foolish", "Lazy"], correctIndex: 0, exampleSentence: "The clever fox escaped the trap." },
-  { question: "Which word means \"to combine\"?", choices: ["Merge", "Divide", "Remove"], correctIndex: 0, exampleSentence: "The two companies decided to merge." },
-  { question: "Which is spelled correctly?", choices: ["Suprise", "Surprise", "Surprize"], correctIndex: 1, exampleSentence: "It was a big surprise party." },
-  { question: "What is the opposite of \"ancient\"?", choices: ["Modern", "Old", "Antique"], correctIndex: 0, exampleSentence: "They live in a modern apartment." },
-  { question: "Which word completes: \"There ___ three books on the shelf\"?", choices: ["is", "are", "was"], correctIndex: 1, exampleSentence: "There are three books on the shelf." },
-  { question: "What is a synonym for \"tired\"?", choices: ["Exhausted", "Energetic", "Curious"], correctIndex: 0, exampleSentence: "After the race, she was exhausted." },
-  { question: "Which is spelled correctly?", choices: ["Buisness", "Business", "Bussiness"], correctIndex: 1, exampleSentence: "My uncle owns a small business." },
-  { question: "Which word means \"to look at carefully\"?", choices: ["Observe", "Ignore", "Forget"], correctIndex: 0, exampleSentence: "Scientists observe the stars every night." },
-  { question: "What is the opposite of \"polite\"?", choices: ["Rude", "Kind", "Gentle"], correctIndex: 0, exampleSentence: "It's rude to interrupt someone." },
-  { question: "Which is spelled correctly?", choices: ["Enviroment", "Environment", "Envirnoment"], correctIndex: 1, exampleSentence: "We must protect the environment." },
-  { question: "Which word completes: \"She is the ___ of the two sisters\"?", choices: ["old", "older", "oldest"], correctIndex: 1, exampleSentence: "She is the older of the two sisters." },
-  { question: "What is a synonym for \"brave\"?", choices: ["Courageous", "Timid", "Nervous"], correctIndex: 0, exampleSentence: "The courageous firefighter saved the family." },
+  { question: "What does \"happy\" mean?", choices: ["עצוב", "שמח", "כועס"], correctIndex: 1, exampleSentence: "I feel happy today." },
+  { question: "What does \"sad\" mean?", choices: ["שמח", "עצוב", "נרגש"], correctIndex: 1, exampleSentence: "She was sad after the movie." },
+  { question: "What does \"big\" mean?", choices: ["קטן", "ארוך", "גדול"], correctIndex: 2, exampleSentence: "The elephant is big." },
+  { question: "What does \"small\" mean?", choices: ["קטן", "גדול", "כבד"], correctIndex: 0, exampleSentence: "It's a small dog." },
+  { question: "What does \"fast\" mean?", choices: ["איטי", "מהיר", "חלש"], correctIndex: 1, exampleSentence: "The car is very fast." },
+  { question: "What does \"slow\" mean?", choices: ["מהיר", "איטי", "חזק"], correctIndex: 1, exampleSentence: "The turtle is slow." },
+  { question: "What does \"hot\" mean?", choices: ["קר", "חם", "רטוב"], correctIndex: 1, exampleSentence: "The soup is hot." },
+  { question: "What does \"cold\" mean?", choices: ["חם", "קר", "יבש"], correctIndex: 1, exampleSentence: "The ice is cold." },
+  { question: "What does \"beautiful\" mean?", choices: ["מכוער", "ישן", "יפה"], correctIndex: 2, exampleSentence: "The garden is beautiful." },
+  { question: "What does \"strong\" mean?", choices: ["חלש", "קטן", "חזק"], correctIndex: 2, exampleSentence: "He is very strong." },
+  { question: "What does \"friend\" mean?", choices: ["אויב", "חבר", "מורה"], correctIndex: 1, exampleSentence: "She is my best friend." },
+  { question: "What does \"family\" mean?", choices: ["כיתה", "משפחה", "עיר"], correctIndex: 1, exampleSentence: "I love my family." },
+  { question: "What does \"house\" mean?", choices: ["בית", "רחוב", "גינה"], correctIndex: 0, exampleSentence: "This is my house." },
+  { question: "What does \"book\" mean?", choices: ["עיתון", "מחברת", "ספר"], correctIndex: 2, exampleSentence: "I am reading a good book." },
+  { question: "What does \"water\" mean?", choices: ["חלב", "מים", "מיץ"], correctIndex: 1, exampleSentence: "Please give me some water." },
+  { question: "What does \"animal\" mean?", choices: ["צמח", "חיה", "אבן"], correctIndex: 1, exampleSentence: "A lion is a wild animal." },
+  { question: "What does \"dog\" mean?", choices: ["חתול", "כלב", "ציפור"], correctIndex: 1, exampleSentence: "My dog loves to run." },
+  { question: "What does \"sun\" mean?", choices: ["ירח", "שמש", "כוכב"], correctIndex: 1, exampleSentence: "The sun is very bright today." },
+  { question: "What does \"moon\" mean?", choices: ["שמש", "ירח", "ענן"], correctIndex: 1, exampleSentence: "We saw the moon last night." },
+  { question: "What does \"tree\" mean?", choices: ["פרח", "דשא", "עץ"], correctIndex: 2, exampleSentence: "The tree has many leaves." },
+  { question: "What does \"river\" mean?", choices: ["ים", "נהר", "אגם"], correctIndex: 1, exampleSentence: "We swam in the river." },
+  { question: "What does \"mountain\" mean?", choices: ["עמק", "הר", "מדבר"], correctIndex: 1, exampleSentence: "They climbed the mountain." },
+  { question: "What does \"rain\" mean?", choices: ["שלג", "רוח", "גשם"], correctIndex: 2, exampleSentence: "The rain fell all night." },
+  { question: "What does \"morning\" mean?", choices: ["ערב", "לילה", "בוקר"], correctIndex: 2, exampleSentence: "I wake up early in the morning." },
+  { question: "What does \"tomorrow\" mean?", choices: ["אתמול", "היום", "מחר"], correctIndex: 2, exampleSentence: "See you tomorrow." },
+  { question: "What does \"kind\" mean?", choices: ["אכזרי", "עצלן", "אדיב"], correctIndex: 2, exampleSentence: "She is very kind to everyone." },
+  { question: "What does \"brave\" mean?", choices: ["פחדן", "עייף", "אמיץ"], correctIndex: 2, exampleSentence: "The brave firefighter saved the cat." },
+  { question: "What does \"clever\" mean?", choices: ["טיפש", "איטי", "חכם"], correctIndex: 2, exampleSentence: "The clever fox found a way out." },
+  { question: "What does \"tired\" mean?", choices: ["ער", "רעב", "עייף"], correctIndex: 2, exampleSentence: "After the long walk, he was tired." },
+  { question: "What does \"hungry\" mean?", choices: ["צמא", "שבע", "רעב"], correctIndex: 2, exampleSentence: "The hungry dog ate all its food." },
 ];
 
 const alexMath: QuizQuestion[] = [
@@ -798,10 +802,10 @@ function missingChallenge(
   };
 }
 
-// Age-5 memory game symbol pool — difficulty picks how many pairs are dealt
-// (see TaskDetailModal's MemoryBody): 1->3 pairs (6 cards) up to 5->10 pairs
-// (20 cards), matching the PRD's 6/10/14/16/20-card progression.
-const miaMemorySymbols = ['🍎', '🐶', '🌟', '🚗', '🎈', '🌈', '🐱', '🎁', '🍭', '⚽'];
+// Age-5 memory game symbol pool — the child picks the board size each time
+// (see TaskDetailModal's MemoryCardCountPicker): 3/5/7/8/10/15 pairs (6-30
+// cards). 15 symbols so the full 30-card option is reachable.
+const miaMemorySymbols = ['🍎', '🐶', '🌟', '🚗', '🎈', '🌈', '🐱', '🎁', '🍭', '⚽', '🦄', '🐸', '🐵', '🎨', '🚀'];
 
 export const defaultChallenges: Challenge[] = [
   // Mia (5) — non-reader: visual/emoji-first content across the PRD's Age-5

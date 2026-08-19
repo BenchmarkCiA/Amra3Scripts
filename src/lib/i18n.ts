@@ -10,6 +10,12 @@ export function isRTL(lang: Language): boolean {
 const dict = {
   en: {
     appName: 'Family Quest',
+    musicOn: 'Music is on',
+    musicOff: 'Music is off',
+    feedBtn: '🍎 Feed',
+    waterBtn: '💧 Give a drink',
+    fedToday: 'Fed today ✓',
+    wateredToday: 'Watered today ✓',
     whoseTurn: "Whose turn is it? Tap your name to start today's quests.",
     parentMode: 'Parent mode',
     age: 'Age',
@@ -104,6 +110,12 @@ const dict = {
   },
   he: {
     appName: 'משימת המשפחה',
+    musicOn: 'המוזיקה פועלת',
+    musicOff: 'המוזיקה כבויה',
+    feedBtn: '🍎 להאכיל',
+    waterBtn: '💧 לתת שתייה',
+    fedToday: 'הואכל היום ✓',
+    wateredToday: 'קיבל שתייה היום ✓',
     whoseTurn: 'של מי התור? הקישו על השם שלכם כדי להתחיל את המשימות של היום.',
     parentMode: 'מצב הורה',
     age: 'גיל',

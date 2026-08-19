@@ -244,13 +244,27 @@ function QuizBody({
     );
   }
 
+  const displayedQuestion = translateQuizQuestion(lang, category, question.question);
+  // Digits/operators/emoji have "weak"/"neutral" Unicode bidi direction, so
+  // inside an RTL page (Hebrew mode) a plain equation like "5 + 3 = ?" can
+  // get visually reordered by the browser's bidi algorithm — the "+" or the
+  // operands can end up on the wrong side even though the string itself is
+  // untouched. Hebrew *text* (letters) has strong RTL direction and isn't
+  // affected, so only force LTR when there's no Hebrew in the string —
+  // that's exactly the pure-symbol case that actually breaks.
+  const isPureSymbolContent = !/[\u0590-\u05FF]/.test(displayedQuestion);
+
   return (
     <div>
       <div className="quest-reward" style={{ marginBottom: 6 }}>
         {t(lang, 'questionOf')} {index + 1} {t(lang, 'of')} {questions.length}
       </div>
-      <div className="modal-desc" style={{ fontWeight: 800, color: 'var(--text-heading)' }}>
-        {translateQuizQuestion(lang, category, question.question)}
+      <div
+        className="modal-desc"
+        dir={isPureSymbolContent ? 'ltr' : undefined}
+        style={{ fontWeight: 800, color: 'var(--text-heading)' }}
+      >
+        {displayedQuestion}
       </div>
       {question.choices.map((choice, i) => (
         <button key={i} className="choice-btn" onClick={() => handleChoice(i)} disabled={feedback === 'right'}>
@@ -439,13 +453,18 @@ function DrawBody({
 }
 
 // Card count per difficulty follows the PRD's 6/10/14/16/20-card progression
-// (expressed here as pairs, since a "card" is one face of a pair).
+// (expressed here as pairs, since a "card" is one face of a pair) — used only
+// to pre-highlight a sensible default in the picker below.
 const MEMORY_PAIRS_BY_DIFFICULTY: Record<number, number> = { 1: 3, 2: 5, 3: 7, 4: 8, 5: 10 };
+
+// All selectable board sizes, independent of difficulty — the child always
+// gets to choose. 15 pairs = 30 cards, on top of the PRD's original 6-20.
+const MEMORY_PAIR_OPTIONS = [3, 5, 7, 8, 10, 15];
 
 // Fallback so a memory challenge can never render as an empty modal — used
 // whenever a challenge is missing its own symbol pool (e.g. one created by
-// hand without setting it).
-const DEFAULT_MEMORY_SYMBOLS = ['🍎', '🐶', '⭐', '🚗', '🎈', '🌈', '🐱', '🎁', '🍭', '⚽'];
+// hand without setting it). 15 symbols so the 30-card option is reachable.
+const DEFAULT_MEMORY_SYMBOLS = ['🍎', '🐶', '⭐', '🚗', '🎈', '🌈', '🐱', '🎁', '🍭', '⚽', '🦄', '🐸', '🐵', '🎨', '🚀'];
 
 interface MemoryCard {
   key: string;
@@ -494,7 +513,7 @@ function MemoryCardCountPicker({
   lang: Parameters<typeof t>[0];
   onChoose: (pairCount: number) => void;
 }) {
-  const options = Object.values(MEMORY_PAIRS_BY_DIFFICULTY).filter((p, i, arr) => arr.indexOf(p) === i && p <= maxPairs);
+  const options = MEMORY_PAIR_OPTIONS.filter((p) => p <= maxPairs);
 
   return (
     <div>
@@ -575,7 +594,7 @@ function MemoryBoard({
     setFlipped((prev) => [...prev, index]);
   }
 
-  const columns = pairCount <= 5 ? 3 : 4;
+  const columns = pairCount <= 5 ? 3 : pairCount <= 10 ? 4 : 5;
 
   return (
     <div>

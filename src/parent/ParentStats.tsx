@@ -1,12 +1,64 @@
 import { useState } from 'react';
-import { useStore } from '../state/store';
-import { availableMonths, getMonthlyStats } from '../lib/selectors';
+import type { Child } from '../types';
+import { useStore, type AppState } from '../state/store';
+import { availableMonths, getMonthlyStats, getTodayItemsForChild, isDone } from '../lib/selectors';
 import { CATEGORY_LABEL } from '../lib/scoring';
+import { todayISO } from '../lib/id';
+import { QuizAnswerDetails } from '../components/QuizAnswerDetails';
 
 function formatMonthLabel(yearMonth: string): string {
   const [y, m] = yearMonth.split('-').map(Number);
   const d = new Date(Date.UTC(y, m - 1, 1));
   return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+}
+
+// Per-day review: which exact quiz questions a child got wrong on a given
+// (any, including past/missed) date — not just the % correct. Reuses
+// getTodayItemsForChild, which despite its name already takes an arbitrary
+// dateISO.
+function DayReview({ state, child }: { state: AppState; child: Child }) {
+  const [date, setDate] = useState(todayISO());
+  const items = getTodayItemsForChild(state, child.id, date);
+
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div className="quest-reward" style={{ marginBottom: 6 }}>
+        Review a specific day
+      </div>
+      <input
+        className="form-input"
+        type="date"
+        value={date}
+        max={todayISO()}
+        onChange={(e) => setDate(e.target.value)}
+      />
+      {items.length === 0 && (
+        <div className="empty-state" style={{ padding: '10px 0' }}>No quests scheduled for {child.name} that day.</div>
+      )}
+      {items.map(({ challenge, completion }) => {
+        const hasWrongAnswers = Boolean(completion?.score?.details?.some((d) => !d.correct));
+        return (
+          <div key={challenge.id} className="approval-row" style={{ flexDirection: 'column', alignItems: 'stretch', padding: '6px 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+              <div className="quest-title" style={{ fontSize: 12.5 }}>
+                {CATEGORY_LABEL[challenge.category]} — {challenge.title}
+              </div>
+              <div className="quest-reward">
+                {completion
+                  ? completion.score
+                    ? `${completion.score.correct}/${completion.score.total} correct`
+                    : isDone(completion)
+                      ? 'Done'
+                      : completion.status
+                  : 'Not done'}
+              </div>
+            </div>
+            {completion && <QuizAnswerDetails completion={completion} defaultOpen={hasWrongAnswers} />}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export function ParentStats() {
@@ -74,6 +126,8 @@ export function ParentStats() {
             ) : (
               <div className="empty-state" style={{ padding: '10px 0' }}>Nothing completed this month yet.</div>
             )}
+
+            <DayReview state={state} child={child} />
           </div>
         );
       })}

@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import type { Child, DigitalItem, EggDef } from '../types';
+import type { Child, DigitalItem, EggDef, Language } from '../types';
 import { useStore, type AppState } from '../state/store';
 import { t, localizeItemName } from '../lib/i18n';
+import { useEggCare } from '../lib/useEggCare';
 import {
   activeChildEgg,
   currentStageForFamily,
@@ -23,10 +24,36 @@ function familyStages(state: AppState, familyId: string): DigitalItem[] {
   return state.characterItems.filter((i) => i.familyId === familyId && i.active).sort((a, b) => a.stageOrder - b.stageOrder);
 }
 
+function EggCareActions({
+  lang,
+  fed,
+  watered,
+  feed,
+  water,
+}: {
+  lang: Language;
+  fed: boolean;
+  watered: boolean;
+  feed: () => void;
+  water: () => void;
+}) {
+  return (
+    <div className="egg-care-actions">
+      <button className="small-btn btn-secondary" disabled={fed} onClick={feed}>
+        {fed ? t(lang, 'fedToday') : t(lang, 'feedBtn')}
+      </button>
+      <button className="small-btn btn-secondary" disabled={watered} onClick={water}>
+        {watered ? t(lang, 'wateredToday') : t(lang, 'waterBtn')}
+      </button>
+    </div>
+  );
+}
+
 function MyCharacterCard({ child }: { child: Child }) {
   const { state } = useStore();
   const lang = state.language;
   const equipped = child.equippedFamily ? currentStageForFamily(state, child, child.equippedFamily) : null;
+  const { fed, watered, dancing, feed, water } = useEggCare(child.id);
 
   if (!equipped) {
     return (
@@ -41,10 +68,11 @@ function MyCharacterCard({ child }: { child: Child }) {
 
   return (
     <div className="card child-summary-card" style={{ textAlign: 'center' }}>
-      <div style={{ fontSize: 56, lineHeight: 1 }}>{equipped.emoji}</div>
+      <div className={`character-avatar${dancing ? ' dancing' : ''}`} style={{ fontSize: 56, lineHeight: 1 }}>{equipped.emoji}</div>
       <div className="section-title" style={{ marginTop: 8 }}>
         {localizeItemName(lang, equipped)}
       </div>
+      <EggCareActions lang={lang} fed={fed} watered={watered} feed={feed} water={water} />
       {nextStage ? (
         <div style={{ marginTop: 10 }}>
           <div className="quest-reward">
@@ -73,7 +101,7 @@ function CharacterTile({ child, item }: { child: Child; item: DigitalItem }) {
 
   return (
     <div className="card" style={{ padding: 14, textAlign: 'center', opacity: owned || unlockable ? 1 : 0.75 }}>
-      <div style={{ fontSize: 36 }}>{owned ? currentStageForFamily(state, child, item.familyId)?.emoji ?? item.emoji : item.emoji}</div>
+      <div className="character-avatar small" style={{ fontSize: 36 }}>{owned ? currentStageForFamily(state, child, item.familyId)?.emoji ?? item.emoji : item.emoji}</div>
       <div style={{ fontWeight: 700, marginTop: 6, fontSize: 13.5 }}>{localizeItemName(lang, item)}</div>
       {owned ? (
         <button
@@ -108,6 +136,7 @@ function EggSection({ child }: { child: Child }) {
   const lang = state.language;
   const active = activeChildEgg(state, child.id);
   const hatched = hatchedEggsForChild(state, child.id);
+  const { fed, watered, dancing, feed, water } = useEggCare(child.id);
 
   if (active) {
     const egg = state.eggDefs.find((e) => e.id === active.eggId);
@@ -117,8 +146,9 @@ function EggSection({ child }: { child: Child }) {
     return (
       <div className="card child-summary-card" style={{ textAlign: 'center' }}>
         <div className="section-title">{t(lang, 'myEgg')}</div>
-        <div style={{ fontSize: 44, margin: '8px 0' }}>{egg.emoji}</div>
+        <div className={dancing ? 'dancing' : undefined} style={{ fontSize: 44, margin: '8px 0' }}>{egg.emoji}</div>
         <div className="quest-title">{localizeItemName(lang, egg)}</div>
+        <EggCareActions lang={lang} fed={fed} watered={watered} feed={feed} water={water} />
         {ready ? (
           <>
             <div className="feedback-msg right" style={{ marginTop: 8 }}>

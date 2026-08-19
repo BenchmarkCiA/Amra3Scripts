@@ -19,6 +19,14 @@ export const characterItems: DigitalItem[] = [
   { id: 'fairy', key: 'fairy', name: 'Fairy', nameHe: 'פיה', emoji: '🧚', familyId: 'fairy', stageOrder: 0, xpRequirement: 400, minAge: 3, maxAge: 9, unlockType: 'xp', active: true },
   { id: 'kitten', key: 'kitten', name: 'Kitten', nameHe: 'גורת חתולים', emoji: '🐱', familyId: 'kitten', stageOrder: 0, xpRequirement: 200, minAge: 3, maxAge: 9, unlockType: 'xp', active: true },
   { id: 'bunny', key: 'bunny', name: 'Bunny', nameHe: 'ארנבון', emoji: '🐰', familyId: 'bunny', stageOrder: 0, xpRequirement: 150, minAge: 3, maxAge: 9, unlockType: 'xp', active: true },
+  // Directly XP-unlockable unicorn (distinct from the egg-gated unicorn
+  // family below) — wide age range so both the 5yo and 11yo can reach it;
+  // the egg-gated family caps out at 9 and would otherwise exclude the 11yo.
+  { id: 'unicorn-friend', key: 'unicorn-friend', name: 'Unicorn', nameHe: 'חד־קרן', emoji: '🦄', familyId: 'unicorn-friend', stageOrder: 0, xpRequirement: 350, minAge: 3, maxAge: 12, unlockType: 'xp', active: true },
+
+  // Age-13 leaning (soccer, for the 13yo)
+  { id: 'soccer-player', key: 'soccer-player', name: 'Soccer Player', nameHe: 'שחקן כדורגל', emoji: '⚽👟', familyId: 'soccer-player', stageOrder: 0, xpRequirement: 350, minAge: 10, maxAge: 99, unlockType: 'xp', active: true },
+  { id: 'soccer-champion', key: 'soccer-champion', name: 'Soccer Champion', nameHe: 'אלוף כדורגל', emoji: '🏆⚽', familyId: 'soccer-champion', stageOrder: 0, xpRequirement: 1600, minAge: 10, maxAge: 99, unlockType: 'xp', active: true },
 
   // Egg-exclusive families — stage 0 can ONLY be obtained by hatching the
   // matching egg (unlockType 'egg'), never shown as directly XP-purchasable.
