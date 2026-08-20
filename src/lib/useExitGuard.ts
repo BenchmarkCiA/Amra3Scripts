@@ -33,16 +33,29 @@ export function useExitGuard() {
   function confirmExit() {
     setShowConfirm(false);
     exitingRef.current = true;
-    // Exactly one guard entry is ever in play at a time (each back-press +
-    // re-arm nets to the same single entry, not two), so one step back
-    // consumes it and lets the real navigation — to whatever was open
-    // before this app, or the platform's own "close app" handling when
-    // there's nothing left — actually happen.
-    window.history.back();
-    // Best-effort: some installed/standalone PWA shells honor this even
-    // though a normal browser tab won't (a script can't close a tab it
-    // didn't open) — harmless no-op there.
-    window.close();
+
+    // None of these can be guaranteed to work — a script cannot force-close
+    // a tab or an installed PWA for security reasons, and a script-triggered
+    // history.back()/go() does not trigger the OS-level "no history left,
+    // close the app" handling the way a real hardware back-press does. So
+    // try the things that *can* work, then detect whether any of them
+    // actually left the page; if not, fall back to blanking the app out
+    // instead of silently leaving the child stuck on the same screen.
+    let left = false;
+    const markLeft = () => {
+      left = true;
+    };
+    window.addEventListener('pagehide', markLeft, { once: true });
+
+    window.close(); // works in some installed/standalone shells
+    window.history.back(); // works if there's a real page behind this one
+
+    window.setTimeout(() => {
+      window.removeEventListener('pagehide', markLeft);
+      if (!left) {
+        window.location.href = 'about:blank';
+      }
+    }, 250);
   }
 
   function cancelExit() {
