@@ -84,23 +84,42 @@
   margin-top: 10px;
 }
 
+/* Fallback for screens with no top bar (parent mode, profile picker) — sits
+   at the top of the screen, never near a bottom nav, so it can't cover it. */
 .music-toggle-btn {
   position: fixed;
-  bottom: 16px;
+  top: 14px;
   inset-inline-end: 16px;
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   border: 1px solid var(--modal-border, rgba(255,255,255,0.15));
   background: var(--modal-surface, #1c1a2b);
   color: inherit;
-  font-size: 18px;
+  font-size: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 25;
   box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+}
+
+/* Inline variant: lives inside the top bar's own flex flow, above the coin
+   pill — no fixed positioning, so it can never overlap the bottom tab bar. */
+.music-toggle-btn-inline {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: inherit;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
 }
 
 /* Top bar */
@@ -130,6 +149,13 @@
 .app-name {
   font: 800 16px var(--font-display);
   color: var(--text-heading);
+}
+
+.top-bar-end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
 }
 
 .coin-pill {

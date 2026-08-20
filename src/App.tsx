@@ -53,7 +53,7 @@ function AppShell() {
   return (
     <>
       {content}
-      {!loading && <MusicToggleButton lang={state.language} />}
+      {!loading && view.mode !== 'kid' && <MusicToggleButton lang={state.language} />}
       {showConfirm && <ExitConfirmModal lang={state.language} onStay={cancelExit} onExit={confirmExit} />}
     </>
   );

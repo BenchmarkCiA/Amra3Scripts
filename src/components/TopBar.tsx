@@ -1,5 +1,6 @@
 import type { Language } from '../types';
 import { t } from '../lib/i18n';
+import { MusicToggleButton } from './MusicToggleButton';
 
 interface Props {
   stars: number;
@@ -13,9 +14,12 @@ export function TopBar({ stars, lang }: Props) {
         <div className="logo-badge" />
         <div className="app-name">{t(lang, 'appName')}</div>
       </div>
-      <div className="coin-pill">
-        <span className="coin-dot" />
-        {stars}
+      <div className="top-bar-end">
+        <MusicToggleButton lang={lang} variant="inline" />
+        <div className="coin-pill">
+          <span className="coin-dot" />
+          {stars}
+        </div>
       </div>
     </div>
   );

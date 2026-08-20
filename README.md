@@ -411,6 +411,27 @@ it's almost certainly in `src/lib/supabaseSync.ts` or `supabaseClient.ts`.
   no Hebrew characters (the exact case that's actually affected) — Hebrew
   instructional/translated text is untouched and still reads correctly
   right-to-left.
+- **Follow-up fixes from parent feedback on the round above:**
+  - Music now plays the family's own track (`public/audio/background-music.mp3`)
+    instead of the synthesized placeholder loop.
+  - The music toggle moved out of a fixed bottom-corner button (which
+    covered the tab bar) into the kid screens' top bar itself, right above
+    the coin pill (`TopBar`'s new `.top-bar-end` column); non-kid screens
+    (parent mode, profile picker) keep a small fixed button pinned to the
+    top instead, so nothing ever overlaps the bottom nav.
+  - The kid home screen now shows the child's actual equipped XP Shop
+    character (e.g. their chosen Fox) instead of a fixed per-profile SVG
+    mascot — `Mascot` reads `child.equippedFamily` via `currentStageForFamily`
+    and only falls back to the old SVG art if nothing is equipped yet.
+  - Fixed the Android/browser back-button exit flow: confirming "Leave" in
+    the exit dialog appeared to do nothing. The history-based guard was
+    miscounting how many entries it needed to unwind (`history.go(-2)` when
+    only one guard entry is ever actually in play) *and* the resulting
+    navigation was being caught by the same popstate listener that shows
+    the dialog, silently re-arming and re-showing it. `useExitGuard` now
+    disarms itself once the user confirms, so the back navigation — or the
+    platform's own "no history left, close the app" handling — actually
+    goes through.
 
 ## Deliberately deferred (see PRD §39's own "don't build everything at once")
 

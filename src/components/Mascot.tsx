@@ -1,5 +1,6 @@
 import type { Child } from '../types';
 import { useStore } from '../state/store';
+import { currentStageForFamily } from '../lib/xpShop';
 
 function DragonMascot() {
   return (
@@ -65,29 +66,37 @@ interface Props {
   child: Child;
 }
 
+function captionFor(child: Child, isHe: boolean): string {
+  if (child.avatarTheme === 'mia') return isHe ? `יוצאים למשימה, ${child.name}!` : `Let's go on a quest, ${child.name}!`;
+  if (child.avatarTheme === 'sam') return isHe ? `הוו! הגיע הזמן למשימה, ${child.name}!` : `Hoot! Time for a quest, ${child.name}!`;
+  return isHe ? `מוכנים למשימות של היום, ${child.name}?` : `Ready for today's quests, ${child.name}?`;
+}
+
+function FallbackMascot({ child }: Props) {
+  if (child.avatarTheme === 'mia') return <DragonMascot />;
+  if (child.avatarTheme === 'sam') return <OwlMascot />;
+  return <IconBadges />;
+}
+
+// Shows the character the child actually picked/unlocked in the XP Shop
+// (e.g. their equipped Fox) instead of a fixed per-profile mascot — the
+// home screen should reflect what they chose, not a generic smiley.
 export function Mascot({ child }: Props) {
   const { state } = useStore();
   const isHe = state.language === 'he';
-  if (child.avatarTheme === 'mia') {
-    return (
-      <div className="mascot-area">
-        <DragonMascot />
-        <div className="mascot-caption">{isHe ? `יוצאים למשימה, ${child.name}!` : `Let's go on a quest, ${child.name}!`}</div>
-      </div>
-    );
-  }
-  if (child.avatarTheme === 'sam') {
-    return (
-      <div className="mascot-area">
-        <OwlMascot />
-        <div className="mascot-caption">{isHe ? `הוו! הגיע הזמן למשימה, ${child.name}!` : `Hoot! Time for a quest, ${child.name}!`}</div>
-      </div>
-    );
-  }
+  const equipped = child.equippedFamily ? currentStageForFamily(state, child, child.equippedFamily) : null;
+  const caption = captionFor(child, isHe);
+
   return (
     <div className="mascot-area">
-      <IconBadges />
-      <div className="mascot-caption">{isHe ? `מוכנים למשימות של היום, ${child.name}?` : `Ready for today's quests, ${child.name}?`}</div>
+      {equipped ? (
+        <div className="character-avatar mascot-character" style={{ fontSize: 76, lineHeight: 1 }}>
+          {equipped.emoji}
+        </div>
+      ) : (
+        <FallbackMascot child={child} />
+      )}
+      <div className="mascot-caption">{caption}</div>
     </div>
   );
 }
