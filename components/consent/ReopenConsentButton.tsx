@@ -16,7 +16,7 @@ export function ReopenConsentButton({ label = "Your Privacy Choices" }: { label?
       >
         {label}
       </button>
-      <PreferencesModal open={prefsOpen} onClose={() => { setPrefsOpen(false); reopen() && undefined }} />
+      <PreferencesModal open={prefsOpen} onClose={() => { setPrefsOpen(false); reopen() }} />
     </>
   )
 }
