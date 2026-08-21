@@ -1,3 +1,5 @@
+import { ReopenConsentButton } from "@/components/consent/ReopenConsentButton"
+
 export default function Footer() {
   return (
     <footer className="bg-primary text-primary-foreground mt-auto">
@@ -21,8 +23,13 @@ export default function Footer() {
           </ul>
         </div>
       </div>
-      <div className="border-t border-primary-foreground/20 text-center py-4 text-sm text-primary-foreground/50">
-        © {new Date().getFullYear()} Store. All rights reserved.
+
+      <div className="border-t border-primary-foreground/20 text-center py-4 text-xs text-primary-foreground/50 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4">
+        <span>© {new Date().getFullYear()} Store. All rights reserved.</span>
+        <a href="/privacy-policy" className="hover:text-primary-foreground/80 transition-colors">Privacy Policy</a>
+        <a href="/cookie-policy" className="hover:text-primary-foreground/80 transition-colors">Cookie Policy</a>
+        <a href="/your-privacy-choices" className="hover:text-primary-foreground/80 transition-colors">Your Privacy Choices</a>
+        <ReopenConsentButton label="Manage Cookies" />
       </div>
     </footer>
   )
