@@ -1,9 +1,18 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
+import { STRICT_COUNTRIES } from "@/lib/consent/constants"
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   let response = NextResponse.next({ request })
+
+  // ── Geo-aware consent mode ─────────────────────────────────────────────────
+  const country = request.headers.get("x-vercel-ip-country") ?? "US"
+  const mode = STRICT_COUNTRIES.has(country) ? "strict" : "notice"
+  response.headers.set("x-consent-mode", mode)
+  response.headers.set("x-consent-country", country)
+  const gpc = request.headers.get("Sec-GPC") === "1" ? "1" : "0"
+  response.headers.set("x-gpc", gpc)
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
