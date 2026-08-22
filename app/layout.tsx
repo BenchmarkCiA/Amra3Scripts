@@ -32,8 +32,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const gpcFromHeader = hdrs.get("x-gpc") === "1"
 
   return (
-    <html lang="he" className={`${inter.variable} ${heebo.variable} ${oswald.variable} h-full`}>
+    <html lang="en" className={`${inter.variable} ${heebo.variable} ${oswald.variable} h-full`}>
       <body className={`min-h-full flex flex-col antialiased ${heebo.variable} ${oswald.variable}`}>
+        <a href="#main-content" className="skip-link">Skip to main content</a>
         <ConsentProvider initialMode={mode} gpcFromHeader={gpcFromHeader}>
           {children}
           <ChatWidget />

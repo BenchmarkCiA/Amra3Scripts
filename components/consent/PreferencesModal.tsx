@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { X, ShieldCheck, Lock } from "lucide-react"
 import { useConsent } from "./ConsentProvider"
 
@@ -13,12 +13,48 @@ export default function PreferencesModal({ open, onClose }: Props) {
   const { categories, gpc, update, reject } = useConsent()
   const [analytics, setAnalytics] = useState(categories.analytics)
   const [marketing, setMarketing] = useState(categories.marketing)
+  const dialogRef = useRef<HTMLDivElement>(null)
 
-  // Sync when consent changes externally
   useEffect(() => {
     setAnalytics(categories.analytics)
     setMarketing(categories.marketing)
   }, [categories])
+
+  // Focus trap + ESC
+  useEffect(() => {
+    if (!open) return
+    const el = dialogRef.current
+    if (!el) return
+
+    const focusable = 'a[href],button:not([disabled]),input,textarea,select,[tabindex]:not([tabindex="-1"])'
+    const getFocusable = () => Array.from(el.querySelectorAll<HTMLElement>(focusable))
+
+    const first = getFocusable()[0]
+    first?.focus()
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { onClose(); return }
+      if (e.key !== "Tab") return
+      const nodes = getFocusable()
+      if (!nodes.length) return
+      const firstEl = nodes[0]
+      const lastEl = nodes[nodes.length - 1]
+      if (e.shiftKey) {
+        if (document.activeElement === firstEl) { e.preventDefault(); lastEl.focus() }
+      } else {
+        if (document.activeElement === lastEl) { e.preventDefault(); firstEl.focus() }
+      }
+    }
+    document.addEventListener("keydown", handleKey)
+    return () => document.removeEventListener("keydown", handleKey)
+  }, [open, onClose])
+
+  // Prevent body scroll
+  useEffect(() => {
+    if (open) document.body.style.overflow = "hidden"
+    else document.body.style.overflow = ""
+    return () => { document.body.style.overflow = "" }
+  }, [open])
 
   if (!open) return null
 
@@ -34,17 +70,19 @@ export default function PreferencesModal({ open, onClose }: Props) {
 
   return (
     <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Privacy preferences"
       style={{
         position: "fixed", inset: 0, zIndex: 10000,
         display: "flex", alignItems: "center", justifyContent: "center",
         background: "rgba(0,0,0,0.45)",
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+      aria-hidden="false"
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="prefs-title"
         style={{
           background: "#fff", borderRadius: 16, padding: "28px 32px",
           maxWidth: 520, width: "calc(100% - 32px)", maxHeight: "90vh",
@@ -52,16 +90,20 @@ export default function PreferencesModal({ open, onClose }: Props) {
         }}
       >
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Privacy Preferences</h2>
-          <button onClick={onClose} aria-label="Close" style={{ background: "none", border: "none", cursor: "pointer" }}>
-            <X size={20} />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <h2 id="prefs-title" style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Privacy Preferences</h2>
+          <button
+            onClick={onClose}
+            aria-label="Close privacy preferences"
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}
+          >
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 
         {gpc && (
-          <div style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13, display: "flex", gap: 8, alignItems: "flex-start" }}>
-            <ShieldCheck size={16} style={{ color: "#0369a1", flexShrink: 0, marginTop: 1 }} />
+          <div role="note" style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13, display: "flex", gap: 8, alignItems: "flex-start" }}>
+            <ShieldCheck size={16} aria-hidden="true" style={{ color: "#0369a1", flexShrink: 0, marginTop: 1 }} />
             <span>
               <strong>Global Privacy Control detected.</strong> Your browser has signalled an opt-out of
               sale/sharing. Non-essential data processing has been disabled automatically.
@@ -76,17 +118,14 @@ export default function PreferencesModal({ open, onClose }: Props) {
 
         {/* Categories */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* Necessary — always on */}
           <CategoryRow
-            icon={<Lock size={16} />}
+            icon={<Lock size={16} aria-hidden="true" />}
             title="Strictly Necessary"
             description="Required for the site to function: session, cart, authentication, and payment processing (Stripe). Cannot be disabled."
             enabled
             locked
             onChange={() => {}}
           />
-
-          {/* Analytics */}
           <CategoryRow
             title="Analytics"
             description="Help us understand how visitors use the site (page views, traffic sources). Data is aggregated and not tied to individual identities."
@@ -94,8 +133,6 @@ export default function PreferencesModal({ open, onClose }: Props) {
             locked={gpc}
             onChange={setAnalytics}
           />
-
-          {/* Marketing */}
           <CategoryRow
             title="Marketing & Advertising"
             description="Enable personalised ads and retargeting. We never share your data with third-party brokers."
@@ -105,7 +142,6 @@ export default function PreferencesModal({ open, onClose }: Props) {
           />
         </div>
 
-        {/* Policy version + links */}
         <p style={{ fontSize: 11, color: "#999", margin: "20px 0 0" }}>
           Policy version 1.0.0 ·{" "}
           <a href="/privacy-policy" style={{ color: "#999" }}>Privacy Policy</a> ·{" "}
@@ -147,6 +183,7 @@ function CategoryRow({
   locked: boolean
   onChange: (v: boolean) => void
 }) {
+  const descId = `pref-desc-${title.replace(/\s+/g, "-").toLowerCase()}`
   return (
     <div style={{ borderTop: "1px solid #eee", paddingTop: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -155,9 +192,9 @@ function CategoryRow({
           {title}
           {locked && <span style={{ fontSize: 11, color: "#999", fontWeight: 400 }}>(always on)</span>}
         </div>
-        <Toggle enabled={enabled} locked={locked} onChange={onChange} />
+        <Toggle enabled={enabled} locked={locked} onChange={onChange} label={title} descId={descId} />
       </div>
-      <p style={{ fontSize: 12, color: "#666", margin: 0, lineHeight: 1.5 }}>{description}</p>
+      <p id={descId} style={{ fontSize: 12, color: "#666", margin: 0, lineHeight: 1.5 }}>{description}</p>
     </div>
   )
 }
@@ -166,16 +203,23 @@ function Toggle({
   enabled,
   locked,
   onChange,
+  label,
+  descId,
 }: {
   enabled: boolean
   locked: boolean
   onChange: (v: boolean) => void
+  label: string
+  descId: string
 }) {
   return (
     <button
+      type="button"
       role="switch"
       aria-checked={enabled}
       aria-disabled={locked}
+      aria-label={`${label}: ${enabled ? "on" : "off"}${locked ? " (required)" : ""}`}
+      aria-describedby={descId}
       onClick={() => !locked && onChange(!enabled)}
       style={{
         width: 44, height: 24, borderRadius: 12, border: "none", cursor: locked ? "default" : "pointer",
@@ -183,7 +227,7 @@ function Toggle({
         position: "relative", transition: "background 0.2s", flexShrink: 0,
       }}
     >
-      <span
+      <span aria-hidden="true"
         style={{
           position: "absolute", top: 3, left: enabled ? 23 : 3,
           width: 18, height: 18, borderRadius: "50%", background: "#fff",

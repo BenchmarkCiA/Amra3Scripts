@@ -29,6 +29,7 @@ export default function Footer() {
         <a href="/privacy-policy" className="hover:text-primary-foreground/80 transition-colors">Privacy Policy</a>
         <a href="/cookie-policy" className="hover:text-primary-foreground/80 transition-colors">Cookie Policy</a>
         <a href="/your-privacy-choices" className="hover:text-primary-foreground/80 transition-colors">Your Privacy Choices</a>
+        <a href="/accessibility" className="hover:text-primary-foreground/80 transition-colors">Accessibility</a>
         <ReopenConsentButton label="Manage Cookies" />
       </div>
     </footer>

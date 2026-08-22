@@ -58,52 +58,57 @@ export default async function ProductsPage({
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
+      <h1 className="sr-only">All Products</h1>
       <div className="flex flex-col md:flex-row gap-8">
         {/* Sidebar filters */}
-        <aside className="w-full md:w-56 shrink-0">
-          <h2 className="font-semibold text-lg mb-4">Categories</h2>
-          <ul className="space-y-2">
-            <li>
-              <a
-                href="/products"
-                className={`block px-3 py-2 rounded-lg text-sm hover:bg-muted transition-colors ${!params.category ? "bg-muted font-medium" : ""}`}
-              >
-                All Products
-              </a>
-            </li>
-            {categories?.map((cat) => (
-              <li key={cat.id}>
+        <aside aria-label="Product filters" className="w-full md:w-56 shrink-0">
+          <nav aria-label="Filter by category">
+            <h2 className="font-semibold text-lg mb-4">Categories</h2>
+            <ul className="space-y-2">
+              <li>
                 <a
-                  href={`/products?category=${cat.slug}`}
-                  className={`block px-3 py-2 rounded-lg text-sm hover:bg-muted transition-colors ${params.category === cat.slug ? "bg-muted font-medium" : ""}`}
+                  href="/products"
+                  aria-current={!params.category ? "page" : undefined}
+                  className={`block px-3 py-2 rounded-lg text-sm hover:bg-muted transition-colors ${!params.category ? "bg-muted font-medium" : ""}`}
                 >
-                  {cat.name}
+                  All Products
                 </a>
               </li>
-            ))}
-          </ul>
+              {categories?.map((cat) => (
+                <li key={cat.id}>
+                  <a
+                    href={`/products?category=${cat.slug}`}
+                    aria-current={params.category === cat.slug ? "page" : undefined}
+                    className={`block px-3 py-2 rounded-lg text-sm hover:bg-muted transition-colors ${params.category === cat.slug ? "bg-muted font-medium" : ""}`}
+                  >
+                    {cat.name}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </aside>
 
         {/* Product grid */}
-        <div className="flex-1">
-          <div className="flex items-center justify-between mb-6">
-            <p className="text-muted-foreground text-sm">
-              {products?.length ?? 0} products
-            </p>
-          </div>
+        <section aria-label="Product listing" className="flex-1">
+          <p className="text-muted-foreground text-sm mb-6" aria-live="polite" aria-atomic="true">
+            {products?.length ?? 0} product{(products?.length ?? 0) !== 1 ? "s" : ""} found
+          </p>
 
           {products && products.length > 0 ? (
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+            <ul className="grid grid-cols-2 lg:grid-cols-3 gap-6 list-none p-0">
               {products.map((product) => (
-                <ProductCard key={product.id} product={product as Product} />
+                <li key={product.id}>
+                  <ProductCard product={product as Product} />
+                </li>
               ))}
-            </div>
+            </ul>
           ) : (
-            <div className="text-center py-24 text-muted-foreground">
+            <p className="text-center py-24 text-muted-foreground">
               No products found.
-            </div>
+            </p>
           )}
-        </div>
+        </section>
       </div>
     </div>
   )

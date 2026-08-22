@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { X } from "lucide-react"
 import { useConsent } from "./ConsentProvider"
 import PreferencesModal from "./PreferencesModal"
@@ -33,10 +33,19 @@ function StrictBanner({
   onAccept: () => void
   onReject: () => void
 }) {
+  const bannerRef = useRef<HTMLDivElement>(null)
+
+  // Move focus into banner on mount
+  useEffect(() => {
+    const first = bannerRef.current?.querySelector<HTMLElement>("button, a[href]")
+    first?.focus()
+  }, [])
+
   return (
     <div
+      ref={bannerRef}
       role="dialog"
-      aria-label="Cookie consent"
+      aria-labelledby="consent-banner-title"
       aria-modal="true"
       style={{
         position: "fixed",
@@ -51,7 +60,7 @@ function StrictBanner({
       }}
     >
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <p style={{ fontSize: 14, marginBottom: 12, lineHeight: 1.5 }}>
+        <p id="consent-banner-title" style={{ fontSize: 14, marginBottom: 12, lineHeight: 1.5 }}>
           We use cookies and similar technologies to operate this site and, with your consent, to
           analyse traffic and personalise ads.{" "}
           <a href="/cookie-policy" style={{ color: "inherit", textDecoration: "underline" }}>
@@ -89,7 +98,7 @@ function NoticeBanner({
 }) {
   return (
     <div
-      role="status"
+      role="region"
       aria-label="Privacy notice"
       style={{
         position: "fixed",
@@ -121,10 +130,10 @@ function NoticeBanner({
         </p>
         <button
           onClick={onDismiss}
-          aria-label="Dismiss"
-          style={{ background: "none", border: "none", cursor: "pointer", padding: 2, flexShrink: 0 }}
+          aria-label="Dismiss privacy notice"
+          style={{ background: "none", border: "none", cursor: "pointer", padding: 4, flexShrink: 0 }}
         >
-          <X size={16} />
+          <X size={16} aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -142,5 +151,6 @@ function btnStyle(bg: string): React.CSSProperties {
     fontWeight: 600,
     cursor: "pointer",
     whiteSpace: "nowrap",
+    minHeight: 44,
   }
 }

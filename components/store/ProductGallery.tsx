@@ -21,31 +21,47 @@ export default function ProductGallery({ images, title }: Props) {
     )
   }
 
+  const currentImg = sorted[selected]
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative aspect-square rounded-xl overflow-hidden bg-white border border-border">
+      {/* Main image */}
+      <div
+        className="relative aspect-square rounded-xl overflow-hidden bg-white border border-border"
+        aria-label={`Product image: ${currentImg.alt || title}`}
+      >
         <Image
-          src={sorted[selected].url}
-          alt={sorted[selected].alt || title}
+          src={currentImg.url}
+          alt={currentImg.alt || title}
           fill
           className="object-contain p-4"
           sizes="(max-width: 768px) 100vw, 50vw"
           priority
         />
       </div>
+
+      {/* Thumbnails */}
       {sorted.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div
+          role="tablist"
+          aria-label="Product image thumbnails"
+          className="flex gap-2 overflow-x-auto pb-1"
+        >
           {sorted.map((img, i) => (
             <button
               key={i}
+              role="tab"
+              aria-selected={i === selected}
+              aria-label={`View image ${i + 1}${img.alt ? `: ${img.alt}` : ""}`}
               onClick={() => setSelected(i)}
               className={`relative shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 bg-white transition-colors ${
-                i === selected ? "border-accent" : "border-transparent"
+                i === selected ? "border-accent" : "border-transparent hover:border-muted-foreground/30"
               }`}
             >
               <Image
                 src={img.url}
-                alt={img.alt || `${title} ${i + 1}`}
+                alt=""
+                aria-hidden="true"
                 fill
                 className="object-contain p-1"
                 sizes="64px"

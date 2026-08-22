@@ -1,18 +1,63 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { X, Minus, Plus, Trash2, Tag } from "lucide-react"
 import Link from "next/link"
 import { useCart } from "@/hooks/useCart"
 import { formatPrice } from "@/lib/utils/currency"
+
+/** Trap focus within `container` when `active`. */
+function useFocusTrap(containerRef: React.RefObject<HTMLElement | null>, active: boolean, onEscape: () => void) {
+  useEffect(() => {
+    if (!active) return
+    const el = containerRef.current
+    if (!el) return
+
+    const focusable = 'a[href],button:not([disabled]),input,textarea,select,[tabindex]:not([tabindex="-1"])'
+    const getFocusable = () => Array.from(el.querySelectorAll<HTMLElement>(focusable))
+
+    // Move focus into the drawer
+    const first = getFocusable()[0]
+    first?.focus()
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { onEscape(); return }
+      if (e.key !== "Tab") return
+      const nodes = getFocusable()
+      if (!nodes.length) return
+      const firstEl = nodes[0]
+      const lastEl = nodes[nodes.length - 1]
+      if (e.shiftKey) {
+        if (document.activeElement === firstEl) { e.preventDefault(); lastEl.focus() }
+      } else {
+        if (document.activeElement === lastEl) { e.preventDefault(); firstEl.focus() }
+      }
+    }
+    document.addEventListener("keydown", handleKey)
+    return () => document.removeEventListener("keydown", handleKey)
+  }, [active, containerRef, onEscape])
+}
 
 export default function CartDrawer() {
   const { items, isOpen, closeCart, removeItem, updateQuantity, total, couponCode, discountAmount, applyCoupon, removeCoupon } = useCart()
   const [couponInput, setCouponInput] = useState("")
   const [couponError, setCouponError] = useState("")
   const [couponLoading, setCouponLoading] = useState(false)
+  const drawerRef = useRef<HTMLDivElement>(null)
   const cartTotal = total()
   const finalTotal = Math.max(0, cartTotal - discountAmount)
+
+  useFocusTrap(drawerRef, isOpen, closeCart)
+
+  // Prevent body scroll when open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden"
+    } else {
+      document.body.style.overflow = ""
+    }
+    return () => { document.body.style.overflow = "" }
+  }, [isOpen])
 
   const handleApplyCoupon = async () => {
     if (!couponInput.trim()) return
@@ -39,12 +84,22 @@ export default function CartDrawer() {
       />
 
       {/* Drawer */}
-      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 flex flex-col shadow-2xl">
+      <div
+        ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Shopping cart"
+        className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 flex flex-col shadow-2xl"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h2 className="font-semibold text-lg">Your Cart ({items.length})</h2>
-          <button onClick={closeCart} className="p-2 hover:bg-muted rounded-lg transition-colors">
-            <X className="w-5 h-5" />
+          <h2 id="cart-title" className="font-semibold text-lg">Your Cart ({items.length})</h2>
+          <button
+            onClick={closeCart}
+            aria-label="Close cart"
+            className="p-2 hover:bg-muted rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
@@ -58,7 +113,7 @@ export default function CartDrawer() {
               </button>
             </div>
           ) : (
-            <ul className="flex flex-col gap-6">
+            <ul className="flex flex-col gap-6" aria-label="Cart items">
               {items.map((item) => (
                 <li key={item.variant_id} className="flex gap-4">
                   <div className="w-20 h-20 rounded-lg bg-muted shrink-0 overflow-hidden">
@@ -79,22 +134,25 @@ export default function CartDrawer() {
                     <div className="flex items-center gap-2 mt-2">
                       <button
                         onClick={() => updateQuantity(item.variant_id, item.quantity - 1)}
+                        aria-label={`Decrease quantity of ${item.title}${item.variant_title ? `, ${item.variant_title}` : ""}`}
                         className="w-7 h-7 rounded border border-border flex items-center justify-center hover:bg-muted transition-colors"
                       >
-                        <Minus className="w-3 h-3" />
+                        <Minus className="w-3 h-3" aria-hidden="true" />
                       </button>
-                      <span className="text-sm font-medium w-6 text-center">{item.quantity}</span>
+                      <span aria-label={`Quantity: ${item.quantity}`} className="text-sm font-medium w-6 text-center">{item.quantity}</span>
                       <button
                         onClick={() => updateQuantity(item.variant_id, item.quantity + 1)}
+                        aria-label={`Increase quantity of ${item.title}${item.variant_title ? `, ${item.variant_title}` : ""}`}
                         className="w-7 h-7 rounded border border-border flex items-center justify-center hover:bg-muted transition-colors"
                       >
-                        <Plus className="w-3 h-3" />
+                        <Plus className="w-3 h-3" aria-hidden="true" />
                       </button>
                       <button
                         onClick={() => removeItem(item.variant_id)}
+                        aria-label={`Remove ${item.title}${item.variant_title ? `, ${item.variant_title}` : ""} from cart`}
                         className="ml-2 p-1 text-muted-foreground hover:text-destructive transition-colors"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" aria-hidden="true" />
                       </button>
                     </div>
                   </div>
@@ -111,23 +169,31 @@ export default function CartDrawer() {
             {couponCode ? (
               <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-3 py-2">
                 <div className="flex items-center gap-2 text-green-700">
-                  <Tag className="w-4 h-4" />
+                  <Tag className="w-4 h-4" aria-hidden="true" />
                   <span className="text-sm font-medium">{couponCode}</span>
                   <span className="text-sm">&minus;{formatPrice(discountAmount, "USD")}</span>
                 </div>
-                <button onClick={removeCoupon} className="text-green-600 hover:text-green-800 text-xs underline">
+                <button
+                  onClick={removeCoupon}
+                  aria-label={`Remove coupon ${couponCode}`}
+                  className="text-green-600 hover:text-green-800 text-xs underline"
+                >
                   Remove
                 </button>
               </div>
             ) : (
               <div className="space-y-1">
+                <label htmlFor="coupon-input" className="text-sm font-medium">Coupon code</label>
                 <div className="flex gap-2">
                   <input
+                    id="coupon-input"
                     type="text"
-                    placeholder="Coupon code"
+                    placeholder="Enter coupon code"
                     value={couponInput}
                     onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError("") }}
                     onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
+                    aria-describedby={couponError ? "coupon-error" : undefined}
+                    aria-invalid={!!couponError}
                     className="flex-1 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
                   <button
@@ -135,10 +201,14 @@ export default function CartDrawer() {
                     disabled={couponLoading || !couponInput.trim()}
                     className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm font-medium hover:bg-secondary/80 transition-colors disabled:opacity-50"
                   >
-                    {couponLoading ? "..." : "Apply"}
+                    {couponLoading ? "Applying…" : "Apply"}
                   </button>
                 </div>
-                {couponError && <p className="text-xs text-destructive">{couponError}</p>}
+                {couponError && (
+                  <p id="coupon-error" role="alert" className="text-xs text-destructive">
+                    {couponError}
+                  </p>
+                )}
               </div>
             )}
 
