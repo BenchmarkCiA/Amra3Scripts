@@ -432,6 +432,21 @@ it's almost certainly in `src/lib/supabaseSync.ts` or `supabaseClient.ts`.
     disarms itself once the user confirms, so the back navigation — or the
     platform's own "no history left, close the app" handling — actually
     goes through.
+  - The exit-confirm fix above still didn't cover a fresh standalone launch
+    (e.g. the PWA opened from its home-screen icon) — there's no real
+    previous page for `history.back()` to land on, so confirming "Leave"
+    silently did nothing. `confirmExit()` now watches for the `pagehide`
+    event after trying `window.close()`/`history.back()`; if the page
+    hasn't actually started unloading within 250ms, it falls back to
+    navigating to `about:blank` so the app visibly closes either way.
+- **Per-child reward assignment.** `Reward` gained an `assignedTo: string[]`
+  field — empty (the default, and what every existing reward has) means
+  available to every child; a parent can restrict a reward to specific kids
+  from Parent → Rewards, using the same "chip row, click to toggle, All to
+  reset" pattern already used for assigning challenges. `RewardShop` and
+  `KidHome`'s "next reward" progress card both filter by it now, so each
+  kid's Reward Shop can be personalized (e.g. an age-13-appropriate prize
+  that a 5yo never sees).
 
 ## Deliberately deferred (see PRD §39's own "don't build everything at once")
 

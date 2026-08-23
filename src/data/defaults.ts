@@ -974,14 +974,16 @@ export const defaultChallenges: Challenge[] = [
   },
 ];
 
-// PRD §19 illustrative reward catalog — parent-editable.
+// PRD §19 illustrative reward catalog — parent-editable. assignedTo: [] means
+// available to every child (the default); a parent can restrict a reward to
+// specific kids from Parent → Rewards.
 export const defaultRewards: Reward[] = [
-  { id: makeId(), name: '+30 min screen time', cost: 30, active: true },
-  { id: makeId(), name: 'Ice cream treat', cost: 45, active: true },
-  { id: makeId(), name: 'Stay up 30 min late', cost: 50, active: true },
-  { id: makeId(), name: 'Pick family movie night', cost: 70, active: true },
-  { id: makeId(), name: 'Small toy', cost: 140, active: true },
-  { id: makeId(), name: 'Family outing', cost: 200, active: true },
+  { id: makeId(), name: '+30 min screen time', cost: 30, active: true, assignedTo: [] },
+  { id: makeId(), name: 'Ice cream treat', cost: 45, active: true, assignedTo: [] },
+  { id: makeId(), name: 'Stay up 30 min late', cost: 50, active: true, assignedTo: [] },
+  { id: makeId(), name: 'Pick family movie night', cost: 70, active: true, assignedTo: [] },
+  { id: makeId(), name: 'Small toy', cost: 140, active: true, assignedTo: [] },
+  { id: makeId(), name: 'Family outing', cost: 200, active: true, assignedTo: [] },
 ];
 
 // PRD §22 — badges are recognition, not big rewards.

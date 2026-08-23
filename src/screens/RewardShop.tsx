@@ -18,7 +18,7 @@ export function RewardShop({ child }: Props) {
     setTimeout(() => setToast(null), 2200);
   }
 
-  const rewards = state.rewards.filter((r) => r.active);
+  const rewards = state.rewards.filter((r) => r.active && (r.assignedTo.length === 0 || r.assignedTo.includes(child.id)));
 
   return (
     <>

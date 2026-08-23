@@ -133,6 +133,7 @@ export interface Reward {
   name: string;
   cost: number;
   active: boolean;
+  assignedTo: string[]; // empty = available to every child (default); non-empty = only these children
 }
 
 export interface RewardRedemption {

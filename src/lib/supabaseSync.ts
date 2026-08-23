@@ -128,7 +128,7 @@ function mapCompletion(row: any): ChallengeCompletion {
 }
 
 function mapReward(row: any): Reward {
-  return { id: row.id, name: row.name, cost: row.cost, active: row.active };
+  return { id: row.id, name: row.name, cost: row.cost, active: row.active, assignedTo: row.assigned_to ?? [] };
 }
 
 function mapRedemption(row: any): RewardRedemption {
@@ -447,14 +447,16 @@ export async function syncActionToSupabase(action: Action, prevState: AppState):
       return;
     }
     case 'ADD_REWARD': {
-      const { error } = await db.from('rewards').insert({ id: action.reward.id, name: action.reward.name, cost: action.reward.cost, active: action.reward.active });
+      const { error } = await db
+        .from('rewards')
+        .insert({ id: action.reward.id, name: action.reward.name, cost: action.reward.cost, active: action.reward.active, assigned_to: action.reward.assignedTo });
       if (error) throw error;
       return;
     }
     case 'UPDATE_REWARD': {
       const { error } = await db
         .from('rewards')
-        .update({ name: action.reward.name, cost: action.reward.cost, active: action.reward.active })
+        .update({ name: action.reward.name, cost: action.reward.cost, active: action.reward.active, assigned_to: action.reward.assignedTo })
         .eq('id', action.reward.id);
       if (error) throw error;
       return;

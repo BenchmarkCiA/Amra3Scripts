@@ -17,7 +17,9 @@ export function KidHome({ child, onOpenTask }: Props) {
   const items = getTodayItemsForChild(state, child.id, todayISO());
   const doneCount = items.filter((i) => isDone(i.completion)).length;
 
-  const affordableRewards = state.rewards.filter((r) => r.active);
+  const affordableRewards = state.rewards.filter(
+    (r) => r.active && (r.assignedTo.length === 0 || r.assignedTo.includes(child.id)),
+  );
   const nextReward = affordableRewards
     .filter((r) => r.cost > child.stars)
     .sort((a, b) => a.cost - b.cost)[0];
