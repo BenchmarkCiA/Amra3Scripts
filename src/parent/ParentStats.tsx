@@ -61,6 +61,47 @@ function DayReview({ state, child }: { state: AppState; child: Child }) {
   );
 }
 
+function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  pending: 'Pending approval',
+  approved: 'Approved',
+  rejected: 'Rejected (refunded)',
+  delivered: 'Delivered',
+};
+
+// A record of what a child actually redeemed and when — Stars are deducted
+// the moment REDEEM_REWARD fires (not on approval), and once a pending
+// redemption is resolved it drops off the Dashboard's "Pending" list with
+// nowhere else showing it. This is that permanent, dated log.
+function RedemptionHistory({ state, child, month }: { state: AppState; child: Child; month: string }) {
+  const redemptions = state.redemptions
+    .filter((r) => r.childId === child.id && r.createdAt.startsWith(month))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div className="quest-reward" style={{ marginBottom: 6 }}>
+        Reward redemptions this month
+      </div>
+      {redemptions.length === 0 && (
+        <div className="empty-state" style={{ padding: '10px 0' }}>No rewards redeemed by {child.name} this month.</div>
+      )}
+      {redemptions.map((r) => (
+        <div key={r.id} className="approval-row" style={{ padding: '6px 0' }}>
+          <div>
+            <div className="quest-title" style={{ fontSize: 12.5 }}>{r.rewardName}</div>
+            <div className="quest-reward">{formatDateTime(r.createdAt)} · {STATUS_LABEL[r.status] ?? r.status}</div>
+          </div>
+          <div className="quest-reward">{r.cost} ⭐</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ParentStats() {
   const { state } = useStore();
   const months = availableMonths(state);
@@ -127,6 +168,7 @@ export function ParentStats() {
               <div className="empty-state" style={{ padding: '10px 0' }}>Nothing completed this month yet.</div>
             )}
 
+            <RedemptionHistory state={state} child={child} month={month} />
             <DayReview state={state} child={child} />
           </div>
         );

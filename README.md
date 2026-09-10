@@ -447,6 +447,14 @@ it's almost certainly in `src/lib/supabaseSync.ts` or `supabaseClient.ts`.
   `KidHome`'s "next reward" progress card both filter by it now, so each
   kid's Reward Shop can be personalized (e.g. an age-13-appropriate prize
   that a 5yo never sees).
+- **Redemption history in Parent → Stats.** Stars are deducted the moment a
+  child redeems a reward (`REDEEM_REWARD`, status starts `'pending'`), but
+  once a parent resolves it, it dropped off the Dashboard's "Pending
+  Redemptions" list with no lasting record anywhere — a parent had no way to
+  later check what a kid redeemed or when. Added a "Reward redemptions this
+  month" list per child (reward name, exact date/time, status, cost),
+  scoped to the already-selected month, reading `state.redemptions` (which
+  was already tracked, just never displayed after the fact).
 
 ## Deliberately deferred (see PRD §39's own "don't build everything at once")
 
