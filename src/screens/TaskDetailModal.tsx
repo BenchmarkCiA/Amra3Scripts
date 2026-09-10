@@ -26,9 +26,10 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
   const [note, setNote] = useState('');
   const helpingOthers = isHelpingOthers(challenge.category);
   // A different 10-question subset of the challenge's full pool each day,
-  // stable for the whole day — see lib/dailyQuiz.ts.
+  // stable for the whole day, cycling through the whole pool with no
+  // repeats before reshuffling — see lib/dailyQuiz.ts.
   const dailyQuestions = useMemo(
-    () => (challenge.quiz ? getDailyQuestions(challenge.quiz, `${challenge.id}-${todayISO()}`) : []),
+    () => (challenge.quiz ? getDailyQuestions(challenge.quiz, challenge.id, todayISO()) : []),
     [challenge.quiz, challenge.id],
   );
 
@@ -314,7 +315,7 @@ function DiscoveryBody({ onDone, lang }: { onDone: (note: string) => void; lang:
       </div>
       <div className="chip-row">
         {factSubjects.map((s) => (
-          <button key={s.id} type="button" className="chip" onClick={() => setPicked(randomFact(s.id, lang))}>
+          <button key={s.id} type="button" className="chip" onClick={() => setPicked(randomFact(s.id, lang, todayISO()))}>
             {s.emoji} {lang === 'he' ? s.labelHe : s.label}
           </button>
         ))}

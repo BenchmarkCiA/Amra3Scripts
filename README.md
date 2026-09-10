@@ -455,6 +455,25 @@ it's almost certainly in `src/lib/supabaseSync.ts` or `supabaseClient.ts`.
   month" list per child (reward name, exact date/time, status, cost),
   scoped to the already-selected month, reading `state.redemptions` (which
   was already tracked, just never displayed after the fact).
+- **Content refresh — daily rotation no longer repeats itself so fast.**
+  `getDailyQuestions` (`lib/dailyQuiz.ts`) previously reshuffled a challenge's
+  whole question pool fresh every single day, which meant a small pool (like
+  a 30-question English pool showing 10/day) could repeat a question the
+  very next day purely by chance. It now deals the pool out like a shuffled
+  deck ("bag randomization," the technique behind e.g. Tetris' 7-bag piece
+  order) — zero repeats within one full pass through the pool, reshuffled
+  only once every `pool.length / count` days. `data/facts.ts`'s
+  `randomFact` (the Discovery feature) had the same problem in a worse
+  form — it used plain `Math.random()`, so a fact could repeat on the very
+  next tap — and now uses the same technique (`dailyBagIndex` in
+  `lib/seededRandom.ts`, shared with the quiz rotation via a new common
+  `dayNumber()` helper).
+- **Content refresh — bigger pools.** Sam's (11yo) and Alex's (13yo) Word
+  Wizard English pools both grew from 30 to 60 questions (Sam: more
+  word-translation pairs; Alex: more spelling/grammar/synonym items in the
+  same style as before). The Discovery/facts pool (`data/facts.ts`) doubled
+  from 24 to 48 facts (4 → 8 per subject, across all 6 subjects), each with
+  a verified-accurate English and Hebrew version.
 
 ## Deliberately deferred (see PRD §39's own "don't build everything at once")
 

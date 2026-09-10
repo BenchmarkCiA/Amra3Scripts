@@ -31,8 +31,29 @@ export function seededShuffle<T>(pool: T[], seedKey: string): T[] {
   return shuffled;
 }
 
-// A pool no bigger than `count` is returned as-is.
-export function seededSubset<T>(pool: T[], seedKey: string, count: number): T[] {
-  if (pool.length <= count) return pool;
-  return seededShuffle(pool, seedKey).slice(0, count);
+const EPOCH_MS = Date.UTC(2020, 0, 1);
+const MS_PER_DAY = 86400000;
+
+// Days since a fixed reference point — the shared "clock" behind every
+// stable-for-the-day, non-repeating pick in the app (quiz rotation, daily
+// facts, etc.), so they all agree on which calendar day it is regardless of
+// which challenge or subject is asking.
+export function dayNumber(dateISO: string): number {
+  return Math.floor((Date.parse(`${dateISO}T00:00:00Z`) - EPOCH_MS) / MS_PER_DAY);
+}
+
+// Deterministic "shuffle-bag" pick, generalized to a single index rather
+// than a whole subset: returns a stable-for-the-day index into an array of
+// `length`, cycling through every index with no repeat before reshuffling —
+// same technique as getDailyQuestions (lib/dailyQuiz.ts), sized down for
+// "one item per day" cases like a daily fact.
+export function dailyBagIndex(length: number, seedKey: string, day: number): number {
+  if (length <= 1) return 0;
+  const pass = Math.floor(day / length);
+  const posInPass = day % length;
+  const order = seededShuffle(
+    Array.from({ length }, (_, i) => i),
+    `${seedKey}-pass-${pass}`,
+  );
+  return order[posInPass];
 }
