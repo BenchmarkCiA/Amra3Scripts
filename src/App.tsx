@@ -7,13 +7,13 @@ import { ParentApp } from './parent/ParentApp';
 import { StarField } from './components/StarField';
 import { ExitConfirmModal } from './components/ExitConfirmModal';
 import { MusicToggleButton } from './components/MusicToggleButton';
-import { isRTL } from './lib/i18n';
+import { isRTL, t } from './lib/i18n';
 import { useExitGuard } from './lib/useExitGuard';
 
 type View = { mode: 'picker' } | { mode: 'kid'; childId: string } | { mode: 'parent-gate' } | { mode: 'parent' };
 
 function AppShell() {
-  const { state, loading } = useStore();
+  const { state, loading, loadError, retryLoad, syncError, dismissSyncError } = useStore();
   const [view, setView] = useState<View>({ mode: 'picker' });
   const { showConfirm, confirmExit, cancelExit } = useExitGuard();
 
@@ -22,15 +22,23 @@ function AppShell() {
     document.documentElement.dir = isRTL(state.language) ? 'rtl' : 'ltr';
   }, [state.language]);
 
+  // Before the family's own settings load, pick the language from the device.
+  const bootLang = loading || loadError ? (navigator.language?.startsWith('he') ? 'he' : state.language) : state.language;
+
   let content;
-  if (loading) {
+  if (loading || loadError) {
     content = (
-      <div className="app-shell theme-parent">
+      <div className="app-shell theme-parent" dir={isRTL(bootLang) ? 'rtl' : 'ltr'}>
         <div className="app-frame">
           <StarField />
           <div className="picker-shell" style={{ position: 'relative', zIndex: 1 }}>
             <div className="picker-title">Family Quest</div>
-            <div className="picker-subtitle">Loading your family's quests…</div>
+            <div className="picker-subtitle">{t(bootLang, loadError ? 'loadFailed' : 'loadingQuests')}</div>
+            {loadError && (
+              <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={retryLoad}>
+                {t(bootLang, 'retry')}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -53,7 +61,12 @@ function AppShell() {
   return (
     <>
       {content}
-      {!loading && view.mode !== 'kid' && <MusicToggleButton lang={state.language} />}
+      {!loading && !loadError && view.mode !== 'kid' && <MusicToggleButton lang={state.language} />}
+      {syncError && (
+        <div className="toast sync-error-toast" role="alert" onClick={dismissSyncError}>
+          ⚠️ {t(state.language, 'syncFailed')}
+        </div>
+      )}
       {showConfirm && <ExitConfirmModal lang={state.language} onStay={cancelExit} onExit={confirmExit} />}
     </>
   );

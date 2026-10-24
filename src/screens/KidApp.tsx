@@ -8,7 +8,8 @@ import { RewardShop } from './RewardShop';
 import { XpShop } from './XpShop';
 import { StreaksBadges } from './StreaksBadges';
 import { TaskDetailModal } from './TaskDetailModal';
-import { t } from '../lib/i18n';
+import { isRTL, t } from '../lib/i18n';
+import { useBackHandler } from '../lib/useExitGuard';
 
 interface Props {
   childId: string;
@@ -22,6 +23,16 @@ export function KidApp({ childId, onSwitchProfile }: Props) {
   const [screen, setScreen] = useState<KidScreen>('home');
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
 
+  // The phone's back button closes an open task before anything else.
+  useBackHandler(
+    activeTaskId
+      ? () => {
+          setActiveTaskId(null);
+          return true;
+        }
+      : null,
+  );
+
   if (!child) return null;
 
   const activeChallenge = activeTaskId ? state.challenges.find((c) => c.id === activeTaskId) ?? null : null;
@@ -32,7 +43,7 @@ export function KidApp({ childId, onSwitchProfile }: Props) {
         <StarField />
         <div style={{ position: 'relative', zIndex: 1 }}>
           <button className="back-btn" style={{ marginInlineStart: 20, marginTop: 12 }} onClick={onSwitchProfile}>
-            ← {t(lang, 'switchProfile')}
+            {isRTL(lang) ? '→' : '←'} {t(lang, 'switchProfile')}
           </button>
         </div>
         <TopBar stars={child.stars} lang={lang} />

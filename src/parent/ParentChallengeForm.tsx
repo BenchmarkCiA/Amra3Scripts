@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { Category, Challenge, ChallengeKind, Difficulty, Recurrence } from '../types';
 import { useStore } from '../state/store';
 import { CATEGORY_LABEL, computeReward, isHelpingOthers } from '../lib/scoring';
-import { makeId } from '../lib/id';
+import { makeId, todayISO } from '../lib/id';
 
 const CATEGORIES: Category[] = [
   'math',
@@ -41,6 +41,7 @@ export function ParentChallengeForm({ onCreated }: { onCreated?: () => void }) {
   const [question, setQuestion] = useState('');
   const [choices, setChoices] = useState(['', '', '']);
   const [correctIndex, setCorrectIndex] = useState(0);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const reward = useMemo(() => computeReward(state.scoringConfig, difficulty, category), [state.scoringConfig, difficulty, category]);
 
@@ -63,8 +64,16 @@ export function ParentChallengeForm({ onCreated }: { onCreated?: () => void }) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim() || assignedTo.length === 0) return;
-    if (recurrence === 'once' && !dueDate) return;
+    if (!title.trim()) return setFormError('Give the challenge a title.');
+    if (assignedTo.length === 0) return setFormError('Pick at least one child (or All).');
+    if (recurrence === 'once' && !dueDate) return setFormError('Pick a date for a one-time challenge.');
+    if (recurrence === 'once' && dueDate < todayISO()) return setFormError("A one-time challenge can't be in the past.");
+    if (kind === 'quiz') {
+      const trimmed = choices.map((c) => c.trim());
+      if (!question.trim() || trimmed.some((c) => !c)) return setFormError('Fill in the question and all three answers.');
+      if (new Set(trimmed).size !== trimmed.length) return setFormError('The three answers must be different.');
+    }
+    setFormError(null);
 
     const challenge: Challenge = {
       id: makeId(),
@@ -234,6 +243,7 @@ export function ParentChallengeForm({ onCreated }: { onCreated?: () => void }) {
         </label>
       </div>
 
+      {formError && <div className="feedback-msg wrong" style={{ marginBottom: 10 }}>{formError}</div>}
       <button className="btn btn-primary" type="submit">
         Create Challenge
       </button>

@@ -475,6 +475,35 @@ it's almost certainly in `src/lib/supabaseSync.ts` or `supabaseClient.ts`.
   from 24 to 48 facts (4 → 8 per subject, across all 6 subjects), each with
   a verified-accurate English and Hebrew version.
 
+- **Full-project bug sweep.** A scan of the sync layer, kid screens, parent
+  screens and content turned up (and this pass fixed):
+  - *Double rewards*: a task could be completed twice the same day (double
+    tap, a second device, or a rejected task resubmitted forever). The
+    reducer now refuses a second live completion per child/challenge/day, the
+    modal ignores repeat taps, and a redo after rejection counts once.
+  - *Streak / balance drift*: approving an old task reset the streak;
+    approval-required submits bumped the DB streak; freeze tokens never
+    refilled; balances were written as absolute "snapshot + delta" so two
+    writers could overwrite each other. Sync now mirrors the reducer's own
+    result (`syncActionToSupabase(action, prev, next)`), balance changes go
+    through an atomic `increment_child_balance` Postgres function, balances
+    never go below zero, and every write's error is checked.
+  - *Silent failures*: a failed save now shows a toast; a failed initial load
+    shows a retry screen instead of fake demo kids.
+  - *Kid screens*: drawing strokes landed off the finger on phones (canvas
+    scaling); a stray tap outside a quiz/game threw away progress; Hebrew
+    algebra rendered as "? = 2x + 20…" (now an LTR isolate); the phone's back
+    button now closes an open task first; music pauses when the app is in
+    the background; "today" follows the local clock (was UTC).
+  - *Parent safety*: deleting a challenge warns that its history goes with it
+    (and suggests switching it Off); rewards confirm before delete; the PIN
+    is changed in its own validated form (4 digits, typed twice) and the
+    "Default PIN" hint hides once it's changed; balance and challenge forms
+    validate instead of silently zeroing/ignoring.
+  - *Content*: Mia's fill-in-the-letter items had several valid answers
+    (C_T → CAT/CUT/COT) — now picture-hinted (🐱 C_T); "NOT round" had two
+    right answers; "GREEN star" offered hearts; three facts corrected.
+
 ## Deliberately deferred (see PRD §39's own "don't build everything at once")
 
 These are called out in the PRD itself as v1.5/v2/v3 scope, or need infrastructure

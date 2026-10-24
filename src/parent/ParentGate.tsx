@@ -50,7 +50,9 @@ export function ParentGate({ onUnlock, onBack }: Props) {
           <button className="parent-link" onClick={onBack}>
             ← {t(lang, 'back')}
           </button>
-          <div className="empty-state" style={{ padding: 0, marginTop: 8 }}>Default PIN: 1234 (change it in Settings)</div>
+          {state.parentPin === '1234' && (
+            <div className="empty-state" style={{ padding: 0, marginTop: 8 }}>Default PIN: 1234 (change it in Settings)</div>
+          )}
         </div>
       </div>
     </div>

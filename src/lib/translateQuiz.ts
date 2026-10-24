@@ -56,6 +56,11 @@ const SHAPE_NAME_HE: Record<string, string> = {
 
 type Rule = { re: RegExp; build: (m: RegExpMatchArray) => string };
 
+// Left-to-right isolate (LRI … PDI): keeps a math expression in reading
+// order when it sits inside Hebrew text. Without it the bidi algorithm moves
+// the trailing "= ?" to the far side and the child sees "? = 2x + 20 = 26".
+const ltr = (expr: string) => `\u2066${expr}\u2069`;
+
 const RULES: Rule[] = [
   // "🍎 🍎 🍎 \nHow many apples?"
   {
@@ -96,12 +101,12 @@ const RULES: Rule[] = [
   // "What is 20% of 160?"
   {
     re: /^What is (\d+)% of (\d+)\?$/,
-    build: (m) => `כמה זה ${m[1]}% מ-${m[2]}?`,
+    build: (m) => `כמה זה ${ltr(`${m[1]}%`)} מ-${m[2]}?`,
   },
   // "Solve: 2x + 20 = 26. x = ?" / "Solve: 5x - 17 = 32. x = ?"
   {
     re: /^Solve: (\d+)x ([+-]) (\d+) = (-?\d+)\. x = \?$/,
-    build: (m) => `פתרו: ${m[1]}x ${m[2] === '+' ? '+' : '-'} ${m[3]} = ${m[4]}. x = ?`,
+    build: (m) => `פתרו: ${ltr(`${m[1]}x ${m[2] === '+' ? '+' : '-'} ${m[3]} = ${m[4]}.  x = ?`)}`,
   },
   // "What is 18^2?"
   {
@@ -116,12 +121,12 @@ const RULES: Rule[] = [
   // "What is 3/4 as a percentage?"
   {
     re: /^What is (\d+)\/(\d+) as a percentage\?$/,
-    build: (m) => `כמה זה ${m[1]}/${m[2]} באחוזים?`,
+    build: (m) => `כמה זה ${ltr(`${m[1]}/${m[2]}`)} באחוזים?`,
   },
   // "What is the perimeter of a 3x12 rectangle?"
   {
     re: /^What is the perimeter of a (\d+)x(\d+) rectangle\?$/,
-    build: (m) => `מה היקף המלבן שגודלו ${m[1]}x${m[2]}?`,
+    build: (m) => `מה היקף המלבן שגודלו ${ltr(`${m[1]}x${m[2]}`)}?`,
   },
 ];
 

@@ -49,7 +49,7 @@ export const factSubjects: FactSubject[] = [
       'The fastest recorded serve in tennis history flew at over 260 km/h (163 mph) — faster than cars are allowed to drive on most highways.',
       'A marathon is 42.195 kilometers long because of the 1908 London Olympics: the race started at Windsor Castle and finished in front of the royal box, and that exact distance just stuck.',
       'In basketball, the hoop has been exactly 10 feet (3.05 meters) high since the game was invented in 1891 — the inventor just happened to nail the peach baskets to a 10-foot railing.',
-      'Table tennis balls can leave the paddle at speeds over 110 km/h during a fast rally, even though the ball itself weighs less than a ping-pong-sized cotton ball.',
+      'In a fast table tennis rally the ball can fly at over 100 km/h, even though it weighs only about 2.7 grams — less than a sheet of paper.',
       'In competitive swimming, races can be decided by hundredths of a second — at the 2008 Olympics, one gold medal was won by a margin of just one one-hundredth of a second.',
       'Soccer is the most popular sport in the world by far, with an estimated 3.5 billion fans following it around the globe.',
       'The Olympic Games began in ancient Greece more than 2,700 years ago, and at first there was only one event: a short foot race.',
@@ -59,7 +59,7 @@ export const factSubjects: FactSubject[] = [
       'ההגשה המהירה ביותר שנמדדה אי פעם בטניס טסה במהירות של מעל 260 קמ"ש — מהר יותר ממה שמותר לרכבים לנסוע ברוב הכבישים המהירים.',
       'אורכו של מרתון הוא 42.195 קילומטר בזכות אולימפיאדת לונדון של 1908: המרוץ התחיל בטירת וינדזור והסתיים מול תא המלוכה, והמרחק המדויק הזה פשוט נשאר.',
       'בכדורסל, גובה הסל הוא בדיוק 10 רגל (3.05 מטר) מאז שהמשחק הומצא ב-1891 — הממציא פשוט מסמר את סלי האפרסקים על מעקה בגובה 10 רגל.',
-      'כדורי טניס שולחן יכולים לעוף מהמחבט במהירות של מעל 110 קמ"ש בזמן חילופי מכות מהירים, למרות שהכדור עצמו שוקל פחות מכדור צמר גפן קטן.',
+      'בחילופי מכות מהירים בטניס שולחן, הכדור יכול לעוף במהירות של מעל 100 קמ"ש, למרות שהוא שוקל רק כ-2.7 גרם — פחות מדף נייר.',
       'בשחייה תחרותית, מרוצים יכולים להיחרץ במאיות השנייה — באולימפיאדת 2008 זכה שחיין אחד במדליית זהב בהפרש של מאית שנייה בודדת בלבד.',
       'כדורגל הוא הספורט הפופולרי ביותר בעולם בפער גדול, עם כ-3.5 מיליארד אוהדים ברחבי העולם, לפי הערכות.',
       'המשחקים האולימפיים החלו ביוון העתיקה לפני יותר מ-2,700 שנה, ובהתחלה היה רק אירוע אחד: מרוץ ריצה קצר.',
@@ -73,7 +73,7 @@ export const factSubjects: FactSubject[] = [
     emoji: '🔬',
     facts: [
       'Water is one of the only substances on Earth that gets less dense when it freezes, which is why ice floats instead of sinking — and why lakes freeze from the top down, letting fish survive underneath.',
-      'Your body makes about 25 million new cells every second, replacing old or damaged ones. Most of the cells in your body today weren\'t there a few years ago.',
+      'Your body replaces roughly 4 million cells every second — mostly blood cells and the cells lining your gut. Over a few years, a large share of the cells in your body are brand new.',
       'Lightning is about five times hotter than the surface of the Sun for a tiny fraction of a second, which is why it instantly heats the air around it and creates the sound we hear as thunder.',
       'Honey never spoils. Archaeologists have found pots of honey in ancient Egyptian tombs that are thousands of years old and still perfectly safe to eat.',
       'Sound travels about four times faster through water than through air, which is one reason whales can hear each other from many kilometers away.',
@@ -83,7 +83,7 @@ export const factSubjects: FactSubject[] = [
     ],
     factsHe: [
       'מים הם אחד החומרים היחידים בכדור הארץ שנעשים פחות צפופים כשהם קופאים, ולכן קרח צף במקום לשקוע — ולכן אגמים קופאים מלמעלה למטה, מה שמאפשר לדגים לשרוד מתחת לקרח.',
-      'הגוף שלכם מייצר כ-25 מיליון תאים חדשים בכל שנייה, שמחליפים תאים ישנים או פגומים. רוב התאים בגוף שלכם היום לא היו שם לפני כמה שנים.',
+      'הגוף שלכם מחליף בערך 4 מיליון תאים בכל שנייה — בעיקר תאי דם ותאים שמצפים את מערכת העיכול. בתוך כמה שנים, חלק גדול מהתאים בגוף שלכם חדשים לגמרי.',
       'ברק חם פי חמישה מפני השמש למשך שבריר שנייה זעיר, ולכן הוא מחמם באופן מיידי את האוויר סביבו ויוצר את הרעם שאנחנו שומעים.',
       'דבש לעולם לא מתקלקל. ארכיאולוגים מצאו סירי דבש בקברי מצרים העתיקה בני אלפי שנים שעדיין בטוחים לגמרי לאכילה.',
       'קול נע במים מהר פי ארבעה בערך מאשר באוויר, וזו אחת הסיבות שלווייתנים יכולים לשמוע זה את זה ממרחק של קילומטרים רבים.',
@@ -152,7 +152,7 @@ export const factSubjects: FactSubject[] = [
     facts: [
       'The Great Pyramid of Giza was the tallest human-made structure in the world for almost 3,800 years, until England\'s Lincoln Cathedral was finished in 1311.',
       'Ancient Romans used urine to clean and whiten their clothes because the ammonia in it acted like a natural bleach and stain remover.',
-      'The first working telephone call and the invention of email happened only about 100 years apart — technology that felt "ancient" to your grandparents is often newer than you\'d guess.',
+      'The first telephone call was made in 1876 by Alexander Graham Bell. His first words to his assistant in the next room were: "Mr. Watson, come here — I want to see you."',
       'Cleopatra lived closer in time to the invention of the iPhone than to the building of the Great Pyramid of Giza — that\'s how far back Egyptian history really goes.',
       'The wheel wasn\'t invented until about 3500 BCE — thousands of years after humans had already built complex structures and boats, which surprises a lot of people.',
       'Oxford University in England is older than the Aztec Empire — Oxford had already been teaching students for over 100 years before the Aztec civilization even began.',
@@ -162,7 +162,7 @@ export const factSubjects: FactSubject[] = [
     factsHe: [
       'הפירמידה הגדולה בגיזה הייתה המבנה הגבוה ביותר שבנה אדם בעולם במשך כמעט 3,800 שנה, עד שקתדרלת לינקולן באנגליה הושלמה בשנת 1311.',
       'הרומאים הקדמונים השתמשו בשתן כדי לנקות ולהלבין את הבגדים שלהם, כי האמוניה שבו פעלה כמו מלבין וכתם-מסיר טבעי.',
-      'שיחת הטלפון הפעילה הראשונה והמצאת הדואר האלקטרוני התרחשו במרחק של כ-100 שנה בלבד זו מזו — טכנולוגיה שהרגישה "עתיקה" לסבים שלכם היא לרוב חדשה יותר משהייתם מנחשים.',
+      'שיחת הטלפון הראשונה נערכה ב-1876 על ידי אלכסנדר גרהם בל. המילים הראשונות שאמר לעוזר שלו בחדר הסמוך היו: "מר ווטסון, בוא הנה — אני רוצה לראות אותך."',
       'קלאופטרה חיה קרובה בזמן להמצאת האייפון יותר מאשר לבניית הפירמידה הגדולה בגיזה — כל כך רחוק ההיסטוריה המצרית באמת מגיעה.',
       'הגלגל לא הומצא עד בערך 3500 לפנה"ס — אלפי שנים אחרי שבני אדם כבר בנו מבנים מורכבים וסירות, עובדה שמפתיעה הרבה אנשים.',
       'אוניברסיטת אוקספורד באנגליה עתיקה יותר מהאימפריה האצטקית — באוקספורד כבר לימדו סטודנטים יותר מ-100 שנה לפני שהתרבות האצטקית בכלל התחילה.',

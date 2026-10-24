@@ -1,4 +1,5 @@
 import type { AppState } from '../state/store';
+import { todayISO } from './id';
 import type { Category, Challenge, ChallengeCompletion } from '../types';
 
 export function isChallengeScheduledToday(challenge: Challenge, dateISO: string, weekday: number): boolean {
@@ -24,8 +25,11 @@ export function getTodayItemsForChild(state: AppState, childId: string, dateISO:
   const weekday = new Date(dateISO + 'T00:00:00Z').getUTCDay();
   const scheduled = state.challenges.filter((c) => c.assignedTo.includes(childId) && isChallengeScheduledToday(c, dateISO, weekday));
   return scheduled.map((challenge) => {
-    const completion =
-      state.completions.find((c) => c.challengeId === challenge.id && c.childId === childId && c.date === dateISO) ?? null;
+    const sameDay = state.completions.filter((c) => c.challengeId === challenge.id && c.childId === childId && c.date === dateISO);
+    // A live attempt (done or waiting for approval) wins over an earlier
+    // rejected one, so a redo after rejection shows as done instead of the
+    // task staying open for unlimited resubmissions.
+    const completion = sameDay.find((c) => c.status !== 'rejected') ?? sameDay[sameDay.length - 1] ?? null;
     return { challenge, completion };
   });
 }
@@ -101,6 +105,6 @@ export function getMonthlyStats(state: AppState, childId: string, yearMonth: str
 export function availableMonths(state: AppState): string[] {
   const set = new Set<string>();
   for (const c of state.completions) set.add(c.date.slice(0, 7));
-  set.add(new Date().toISOString().slice(0, 7)); // always include the current month
+  set.add(todayISO().slice(0, 7)); // always include the current month
   return Array.from(set).sort().reverse();
 }

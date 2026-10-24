@@ -13,8 +13,7 @@ import type {
   StreakInfo,
 } from '../types';
 import { supabase } from './supabaseClient';
-import { computeReward } from './scoring';
-import { bumpStreak, initialStreak } from './streak';
+import { computeReward, defaultScoringConfig } from './scoring';
 import { makeId, todayISO } from './id';
 
 function must() {
@@ -232,7 +231,7 @@ export async function fetchAppState(): Promise<AppState | null> {
     rewards: (rewards.data ?? []).map(mapReward),
     redemptions: (redemptions.data ?? []).map(mapRedemption),
     streaks: streakMap,
-    scoringConfig: scoringConfig.data ? mapScoringConfig(scoringConfig.data) : ({} as ScoringConfig),
+    scoringConfig: scoringConfig.data ? mapScoringConfig(scoringConfig.data) : defaultScoringConfig,
     parentPin: appSettings.data?.parent_pin ?? '1234',
     language: appSettings.data?.language ?? 'en',
     characterItems: (digitalItems.data ?? []).map(mapDigitalItem),
@@ -248,34 +247,38 @@ export async function fetchAppState(): Promise<AppState | null> {
 // current balances) it needs — mirroring exactly what the local reducer in
 // state/store.tsx already computed, so local state and the DB never diverge.
 
-async function creditChildRow(childId: string, stars: number, xp: number, source: string, referenceId: string, prevState: AppState) {
+// Mirrors the balance change the reducer actually applied (already clamped at
+// zero) as an atomic server-side increment, so two writers (kid tablet +
+// parent phone, or two quick actions) can't overwrite each other with stale
+// absolute totals.
+async function syncBalanceDelta(childId: string, source: string, referenceId: string, prevState: AppState, nextState: AppState) {
   const db = must();
-  const child = prevState.children.find((c) => c.id === childId);
-  if (!child) return;
-  const ops: PromiseLike<any>[] = [];
-  if (stars !== 0 || xp !== 0) {
-    ops.push(db.from('children').update({ stars: child.stars + stars, xp: child.xp + xp }).eq('id', childId));
-  }
+  const before = prevState.children.find((c) => c.id === childId);
+  const after = nextState.children.find((c) => c.id === childId);
+  if (!before || !after) return;
+  const stars = after.stars - before.stars;
+  const xp = after.xp - before.xp;
+  if (stars === 0 && xp === 0) return;
+  const { error } = await db.rpc('increment_child_balance', { p_child_id: childId, p_stars: stars, p_xp: xp });
+  if (error) throw error;
   if (stars !== 0) {
-    ops.push(db.from('star_transactions').insert({ child_id: childId, amount: stars, source, reference_id: referenceId }));
+    const { error: txError } = await db.from('star_transactions').insert({ child_id: childId, amount: stars, source, reference_id: referenceId });
+    if (txError) throw txError;
   }
   if (xp !== 0) {
-    ops.push(db.from('xp_transactions').insert({ child_id: childId, amount: xp, source, reference_id: referenceId }));
+    const { error: txError } = await db.from('xp_transactions').insert({ child_id: childId, amount: xp, source, reference_id: referenceId });
+    if (txError) throw txError;
   }
-  await Promise.all(ops);
 }
 
-async function bumpStreakRow(childId: string, date: string, prevState: AppState) {
-  const doneToday = prevState.completions.filter(
-    (c) => c.childId === childId && c.date === date && (c.status === 'completed' || c.status === 'approved' || c.status === 'awaiting_approval'),
-  ).length;
-  // +1 because prevState is the snapshot *before* this action's completion was added.
-  if (doneToday + 1 < prevState.scoringConfig.minChallengesForStreak) return;
-  const current = prevState.streaks[childId] ?? initialStreak(childId, prevState.scoringConfig.monthlyFreezeTokens);
-  const next = bumpStreak(current, date);
-  if (next.lastCompletedDate === current.lastCompletedDate && next.currentStreak === current.currentStreak) return;
+// Writes the streak exactly as the reducer computed it (if it changed), so
+// the database can never drift from what the child sees.
+async function syncStreak(childId: string, prevState: AppState, nextState: AppState) {
+  const before = prevState.streaks[childId];
+  const next = nextState.streaks[childId];
+  if (!next || next === before) return;
   const db = must();
-  await db.from('streaks').upsert({
+  const { error } = await db.from('streaks').upsert({
     child_id: childId,
     current_streak: next.currentStreak,
     longest_streak: next.longestStreak,
@@ -283,6 +286,7 @@ async function bumpStreakRow(childId: string, date: string, prevState: AppState)
     freeze_tokens_available: next.freezeTokensAvailable,
     freeze_tokens_used: next.freezeTokensUsed,
   });
+  if (error) throw error;
 }
 
 function challengeRow(challenge: Challenge) {
@@ -308,7 +312,7 @@ function challengeRow(challenge: Challenge) {
   };
 }
 
-export async function syncActionToSupabase(action: Action, prevState: AppState): Promise<void> {
+export async function syncActionToSupabase(action: Action, prevState: AppState, nextState: AppState): Promise<void> {
   const db = must();
 
   switch (action.type) {
@@ -329,8 +333,8 @@ export async function syncActionToSupabase(action: Action, prevState: AppState):
         completed_at: new Date().toISOString(),
       });
       if (error) throw error;
-      await creditChildRow(action.childId, reward.stars, reward.xp, `Challenge: ${challenge.title}`, challenge.id, prevState);
-      await bumpStreakRow(action.childId, date, prevState);
+      await syncBalanceDelta(action.childId, `Challenge: ${challenge.title}`, challenge.id, prevState, nextState);
+      await syncStreak(action.childId, prevState, nextState);
       return;
     }
     case 'COMPLETE_TASK': {
@@ -351,10 +355,8 @@ export async function syncActionToSupabase(action: Action, prevState: AppState):
         completed_at: new Date().toISOString(),
       });
       if (error) throw error;
-      if (status === 'completed') {
-        await creditChildRow(action.childId, reward.stars, reward.xp, `Challenge: ${challenge.title}`, challenge.id, prevState);
-      }
-      await bumpStreakRow(action.childId, date, prevState);
+      await syncBalanceDelta(action.childId, `Challenge: ${challenge.title}`, challenge.id, prevState, nextState);
+      await syncStreak(action.childId, prevState, nextState);
       return;
     }
     case 'RESOLVE_APPROVAL': {
@@ -368,8 +370,8 @@ export async function syncActionToSupabase(action: Action, prevState: AppState):
       if (error) throw error;
       if (action.approve) {
         const challenge = prevState.challenges.find((c) => c.id === completion.challengeId);
-        await creditChildRow(completion.childId, completion.starsEarned, completion.xpEarned, `Challenge: ${challenge?.title ?? ''}`, completion.challengeId, prevState);
-        await bumpStreakRow(completion.childId, completion.date, prevState);
+        await syncBalanceDelta(completion.childId, `Challenge: ${challenge?.title ?? ''}`, completion.challengeId, prevState, nextState);
+        await syncStreak(completion.childId, prevState, nextState);
       }
       return;
     }
@@ -381,14 +383,7 @@ export async function syncActionToSupabase(action: Action, prevState: AppState):
       if (error) throw error;
       if (wasCredited) {
         const challenge = prevState.challenges.find((c) => c.id === completion.challengeId);
-        await creditChildRow(
-          completion.childId,
-          -completion.starsEarned,
-          -completion.xpEarned,
-          `Undo: ${challenge?.title ?? ''}`,
-          completion.challengeId,
-          prevState,
-        );
+        await syncBalanceDelta(completion.childId, `Undo: ${challenge?.title ?? ''}`, completion.challengeId, prevState, nextState);
       }
       return;
     }
@@ -405,8 +400,7 @@ export async function syncActionToSupabase(action: Action, prevState: AppState):
         status: 'pending',
       });
       if (error) throw error;
-      await db.from('children').update({ stars: child.stars - reward.cost }).eq('id', child.id);
-      await db.from('star_transactions').insert({ child_id: child.id, amount: -reward.cost, source: `Reward: ${reward.name}`, reference_id: reward.id });
+      await syncBalanceDelta(child.id, `Reward: ${reward.name}`, reward.id, prevState, nextState);
       return;
     }
     case 'RESOLVE_REDEMPTION': {
@@ -418,11 +412,7 @@ export async function syncActionToSupabase(action: Action, prevState: AppState):
         .eq('id', action.redemptionId);
       if (error) throw error;
       if (action.status === 'rejected' && redemption.status === 'pending') {
-        const child = prevState.children.find((c) => c.id === redemption.childId);
-        if (child) {
-          await db.from('children').update({ stars: child.stars + redemption.cost }).eq('id', child.id);
-          await db.from('star_transactions').insert({ child_id: redemption.childId, amount: redemption.cost, source: `Refund: ${redemption.rewardName}`, reference_id: redemption.id });
-        }
+        await syncBalanceDelta(redemption.childId, `Refund: ${redemption.rewardName}`, redemption.id, prevState, nextState);
       }
       return;
     }
@@ -496,15 +486,11 @@ export async function syncActionToSupabase(action: Action, prevState: AppState):
       return;
     }
     case 'ADJUST_STARS': {
-      await creditChildRow(action.childId, action.amount, action.xpAmount ?? 0, action.reason, 'manual', prevState);
+      await syncBalanceDelta(action.childId, action.reason, 'manual', prevState, nextState);
       return;
     }
     case 'SET_BALANCE': {
-      const child = prevState.children.find((c) => c.id === action.childId);
-      if (!child) return;
-      const deltaStars = action.stars - child.stars;
-      const deltaXp = action.xp - child.xp;
-      await creditChildRow(action.childId, deltaStars, deltaXp, action.reason, 'manual-set', prevState);
+      await syncBalanceDelta(action.childId, action.reason, 'manual-set', prevState, nextState);
       return;
     }
     case 'UNLOCK_ITEM': {
@@ -553,7 +539,8 @@ export async function syncActionToSupabase(action: Action, prevState: AppState):
         const { error: unlockError } = await db.from('child_unlocks').insert({ child_id: child.id, item_id: baseItem.id });
         if (unlockError) throw unlockError;
       }
-      await db.from('children').update({ equipped_family: egg.familyId }).eq('id', child.id);
+      const { error: equipError } = await db.from('children').update({ equipped_family: egg.familyId }).eq('id', child.id);
+      if (equipError) throw equipError;
       return;
     }
     case 'RESET_EGG': {

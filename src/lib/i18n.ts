@@ -107,6 +107,13 @@ const dict = {
     exitConfirmStay: 'Stay',
     exitConfirmLeave: 'Exit',
     niceWork: 'Nice work!',
+    correctWord: 'correct',
+    helpingBonus: 'helping-others bonus!',
+    close: 'Close',
+    loadingQuests: "Loading your family's quests…",
+    loadFailed: "Couldn't load your family's data. Check the internet connection and try again.",
+    retry: 'Try again',
+    syncFailed: "Couldn't save the last change — check the internet connection. It will be lost on reload.",
   },
   he: {
     appName: 'משימת המשפחה',
@@ -207,6 +214,13 @@ const dict = {
     exitConfirmStay: 'להישאר',
     exitConfirmLeave: 'לצאת',
     niceWork: 'כל הכבוד!',
+    correctWord: 'נכון',
+    helpingBonus: 'בונוס עזרה לאחרים!',
+    close: 'סגירה',
+    loadingQuests: 'טוענים את המשימות של המשפחה…',
+    loadFailed: 'לא הצלחנו לטעון את הנתונים של המשפחה. בדקו את החיבור לאינטרנט ונסו שוב.',
+    retry: 'נסו שוב',
+    syncFailed: 'השינוי האחרון לא נשמר — בדקו את החיבור לאינטרנט. הוא יאבד ברענון.',
   },
 } as const;
 

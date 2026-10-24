@@ -5,6 +5,9 @@ export function makeId(): string {
   return crypto.randomUUID();
 }
 
+// Local calendar date (not UTC) so the day rolls over at the family's
+// midnight rather than at 02:00/03:00 Israel time.
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }

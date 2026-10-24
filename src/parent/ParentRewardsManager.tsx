@@ -105,7 +105,11 @@ function RewardRow({ reward }: { reward: Reward }) {
         >
           {reward.active ? 'Disable' : 'Enable'}
         </button>
-        <button className="small-btn btn-danger" onClick={() => dispatch({ type: 'DELETE_REWARD', rewardId: reward.id })}>
+        <button className="small-btn btn-danger" onClick={() => {
+            if (confirm(`Delete the reward "${reward.name}"? To just hide it from the kids, use Disable instead.`)) {
+              dispatch({ type: 'DELETE_REWARD', rewardId: reward.id });
+            }
+          }}>
           Delete
         </button>
       </div>

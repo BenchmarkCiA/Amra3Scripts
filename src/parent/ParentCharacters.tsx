@@ -11,6 +11,10 @@ function ItemRow({ item }: { item: DigitalItem }) {
   const [saved, setSaved] = useState(false);
 
   function handleSave() {
+    if (xp < 0 || minAge < 0 || maxAge < minAge) {
+      alert('XP must be 0 or more, and the minimum age can\'t be above the maximum age.');
+      return;
+    }
     dispatch({ type: 'UPDATE_CHARACTER_ITEM', item: { ...item, xpRequirement: xp, minAge, maxAge } });
     setSaved(true);
     setTimeout(() => setSaved(false), 1200);
@@ -50,6 +54,10 @@ function EggRow({ egg }: { egg: EggDef }) {
   const [saved, setSaved] = useState(false);
 
   function handleSave() {
+    if (xp < 0 || minAge < 0 || maxAge < minAge) {
+      alert('XP must be 0 or more, and the minimum age can\'t be above the maximum age.');
+      return;
+    }
     dispatch({ type: 'UPDATE_EGG_DEF', egg: { ...egg, requiredXp: xp, minAge, maxAge } });
     setSaved(true);
     setTimeout(() => setSaved(false), 1200);

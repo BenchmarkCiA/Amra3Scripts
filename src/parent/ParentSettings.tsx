@@ -61,10 +61,66 @@ function LanguageCard() {
   );
 }
 
+// Changed on its own (not bundled with the scoring form) so editing scores
+// can never silently change the PIN, and validated so the gate can't end up
+// with an empty or mistyped PIN.
+function PinCard() {
+  const { dispatch } = useStore();
+  const [pin, setPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!/^\d{4}$/.test(pin)) {
+      setMessage({ ok: false, text: 'The PIN must be exactly 4 digits.' });
+      return;
+    }
+    if (pin !== confirmPin) {
+      setMessage({ ok: false, text: "The two PINs don't match." });
+      return;
+    }
+    dispatch({ type: 'SET_PARENT_PIN', pin });
+    setPin('');
+    setConfirmPin('');
+    setMessage({ ok: true, text: 'PIN changed.' });
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="card" style={{ marginTop: 16 }}>
+      <div className="form-group">
+        <label className="form-label">New parent PIN (4 digits)</label>
+        <input
+          className="form-input"
+          type="password"
+          inputMode="numeric"
+          maxLength={4}
+          value={pin}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+        />
+      </div>
+      <div className="form-group">
+        <label className="form-label">Repeat new PIN</label>
+        <input
+          className="form-input"
+          type="password"
+          inputMode="numeric"
+          maxLength={4}
+          value={confirmPin}
+          onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
+        />
+      </div>
+      {message && <div className={`feedback-msg ${message.ok ? 'right' : 'wrong'}`}>{message.text}</div>}
+      <button className="btn btn-secondary" type="submit">
+        Change PIN
+      </button>
+    </form>
+  );
+}
+
 export function ParentSettings() {
   const { state, dispatch } = useStore();
   const [config, setConfig] = useState(state.scoringConfig);
-  const [pin, setPin] = useState(state.parentPin);
   const [saved, setSaved] = useState(false);
 
   function updateTableCell(diff: Difficulty, field: 'stars' | 'xp', value: number) {
@@ -74,7 +130,6 @@ export function ParentSettings() {
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
     dispatch({ type: 'UPDATE_SCORING_CONFIG', config });
-    dispatch({ type: 'SET_PARENT_PIN', pin });
     setSaved(true);
     setTimeout(() => setSaved(false), 1800);
   }
@@ -170,17 +225,12 @@ export function ParentSettings() {
           </div>
         </div>
 
-        <div className="card" style={{ marginBottom: 16 }}>
-          <div className="form-group">
-            <label className="form-label">Parent PIN</label>
-            <input className="form-input" value={pin} onChange={(e) => setPin(e.target.value)} />
-          </div>
-        </div>
-
         <button className="btn btn-primary" type="submit">
           {saved ? 'Saved!' : 'Save Settings'}
         </button>
       </form>
+
+      <PinCard />
 
       <div style={{ marginTop: 24 }}>
         {isSupabaseConfigured ? (

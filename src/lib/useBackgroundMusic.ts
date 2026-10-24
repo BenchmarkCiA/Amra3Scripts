@@ -32,12 +32,22 @@ export function useBackgroundMusic() {
     backgroundMusic.start();
     // Browsers block audio until a user gesture happens on the page, so if
     // the very first start() call was silently blocked, retry on the next tap.
-    const retryStart = () => backgroundMusic.start();
+    const retryStart = () => {
+      if (document.visibilityState === 'visible') backgroundMusic.start();
+    };
+    // Pause while the app is in the background (switched apps, screen off),
+    // resume when it comes back.
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') backgroundMusic.stop();
+      else backgroundMusic.start();
+    };
     document.addEventListener('pointerdown', retryStart);
     document.addEventListener('keydown', retryStart);
+    document.addEventListener('visibilitychange', onVisibility);
     return () => {
       document.removeEventListener('pointerdown', retryStart);
       document.removeEventListener('keydown', retryStart);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [enabled]);
 

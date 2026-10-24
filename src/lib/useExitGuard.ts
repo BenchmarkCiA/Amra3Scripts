@@ -1,17 +1,34 @@
 import { useEffect, useRef, useState } from 'react';
 
+// Screens can claim the phone's back button first (e.g. an open task modal
+// closes instead of asking "leaving already?"). Last registered wins.
+const backHandlers: Array<() => boolean> = [];
+
+export function useBackHandler(handler: (() => boolean) | null) {
+  const ref = useRef(handler);
+  ref.current = handler;
+  const active = handler !== null;
+  useEffect(() => {
+    if (!active) return;
+    const fn = () => (ref.current ? ref.current() : false);
+    backHandlers.push(fn);
+    return () => {
+      const i = backHandlers.lastIndexOf(fn);
+      if (i >= 0) backHandlers.splice(i, 1);
+    };
+  }, [active]);
+}
+
 // The app has no router/history entries of its own, so a phone's back
-// button (or back-swipe gesture) normally exits the page outright on the
-// very first press — losing any in-progress quest state with no warning.
-// This keeps one extra history entry "in reserve": the first back press is
-// caught as a popstate event instead of leaving, an in-app confirm dialog
-// asks whether to exit, and canceling re-arms the guard for next time.
+// button (or back-swipe gesture) would exit the page on the very first press
+// — losing in-progress quest state with no warning. One extra history entry
+// is kept "in reserve": a back press is caught as a popstate event, offered
+// to any registered back handler (e.g. close the open task), and otherwise
+// an in-app confirm dialog asks whether to exit.
 export function useExitGuard() {
   const [showConfirm, setShowConfirm] = useState(false);
-  // Once the user confirms they want to leave, the popstate handler below
-  // must stop re-arming the guard — otherwise the back navigation we
-  // trigger in confirmExit() immediately re-triggers handlePopState, which
-  // re-shows the same dialog and makes "Leave" look like it does nothing.
+  // Once the user confirms they want to leave, the popstate handler must stop
+  // re-arming the guard, otherwise our own back navigation re-opens the dialog.
   const exitingRef = useRef(false);
 
   useEffect(() => {
@@ -19,43 +36,56 @@ export function useExitGuard() {
     pushGuard();
 
     function handlePopState() {
-      if (exitingRef.current) return; // already confirmed — let this navigation go through
-      // Re-arm immediately, before the user has even answered, so a second
-      // rapid back-press while the dialog is open is still caught.
+      if (exitingRef.current) return;
+      // Re-arm immediately so a second rapid back-press is still caught.
       pushGuard();
+      const handler = backHandlers[backHandlers.length - 1];
+      if (handler && handler()) return;
       setShowConfirm(true);
     }
 
+    // Coming back to this page from the browser's back/forward cache: the
+    // previous "exiting" state is stale, so re-arm the guard.
+    function handlePageShow(e: PageTransitionEvent) {
+      if (!e.persisted) return;
+      exitingRef.current = false;
+      pushGuard();
+    }
+
     window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('pageshow', handlePageShow);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('pageshow', handlePageShow);
+    };
   }, []);
 
   function confirmExit() {
     setShowConfirm(false);
     exitingRef.current = true;
 
-    // None of these can be guaranteed to work — a script cannot force-close
-    // a tab or an installed PWA for security reasons, and a script-triggered
-    // history.back()/go() does not trigger the OS-level "no history left,
-    // close the app" handling the way a real hardware back-press does. So
-    // try the things that *can* work, then detect whether any of them
-    // actually left the page; if not, fall back to blanking the app out
-    // instead of silently leaving the child stuck on the same screen.
+    // A page can't close a browser tab or an installed PWA. So: step back past
+    // our guard entry *and* the app's own entry to whatever was open before
+    // (a search result, a link, the launcher). If nothing starts unloading in
+    // time — there was nothing before us — blank the page as a last resort.
+    // The wait is generous so a slow previous page isn't cancelled mid-load.
     let left = false;
     const markLeft = () => {
       left = true;
     };
     window.addEventListener('pagehide', markLeft, { once: true });
+    window.addEventListener('beforeunload', markLeft, { once: true });
 
-    window.close(); // works in some installed/standalone shells
-    window.history.back(); // works if there's a real page behind this one
+    window.close(); // honoured by some installed/standalone shells
+    window.history.go(-2);
 
     window.setTimeout(() => {
       window.removeEventListener('pagehide', markLeft);
-      if (!left) {
+      window.removeEventListener('beforeunload', markLeft);
+      if (!left && document.visibilityState === 'visible') {
         window.location.href = 'about:blank';
       }
-    }, 250);
+    }, 1500);
   }
 
   function cancelExit() {

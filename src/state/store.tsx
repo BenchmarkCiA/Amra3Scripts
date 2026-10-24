@@ -137,6 +137,13 @@ function creditChild(
   source: string,
   referenceId: string,
 ): Pick<AppState, 'children' | 'starTx' | 'xpTx'> {
+  // Balances never go below zero (e.g. undoing a task whose Stars were
+  // already spent): clamp the delta, and record what was actually applied.
+  const child = state.children.find((c) => c.id === childId);
+  if (child) {
+    stars = Math.max(stars, -child.stars);
+    xp = Math.max(xp, -child.xp);
+  }
   const children = state.children.map((c) => (c.id === childId ? { ...c, stars: c.stars + stars, xp: c.xp + xp } : c));
   const starTx: StarTransaction[] = stars !== 0
     ? [...state.starTx, { id: makeId(), childId, amount: stars, source, referenceId, createdAt: new Date().toISOString() }]
@@ -153,15 +160,23 @@ function maybeBumpStreak(state: AppState, childId: string, date: string): Record
   ).length;
   if (doneToday < state.scoringConfig.minChallengesForStreak) return state.streaks;
   const current = state.streaks[childId] ?? initialStreak(childId, state.scoringConfig.monthlyFreezeTokens);
-  return { ...state.streaks, [childId]: bumpStreak(current, date) };
+  return { ...state.streaks, [childId]: bumpStreak(current, date, state.scoringConfig.monthlyFreezeTokens) };
 }
 
-function reducer(state: AppState, action: Action): AppState {
+// One live completion per child/challenge/day: a rejected attempt can be
+// redone, anything else (done or waiting for approval) blocks a repeat.
+// Guards double taps and a second device that hasn't refreshed yet.
+function hasLiveCompletion(state: AppState, childId: string, challengeId: string, date: string): boolean {
+  return state.completions.some((c) => c.childId === childId && c.challengeId === challengeId && c.date === date && c.status !== 'rejected');
+}
+
+export function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'COMPLETE_QUIZ': {
       const challenge = state.challenges.find((c) => c.id === action.challengeId);
       if (!challenge) return state;
       const date = todayISO();
+      if (hasLiveCompletion(state, action.childId, challenge.id, date)) return state;
       const reward = computeReward(state.scoringConfig, challenge.difficulty, challenge.category);
       const completion: ChallengeCompletion = {
         id: action.completionId ?? makeId(),
@@ -183,6 +198,7 @@ function reducer(state: AppState, action: Action): AppState {
       const challenge = state.challenges.find((c) => c.id === action.challengeId);
       if (!challenge) return state;
       const date = todayISO();
+      if (hasLiveCompletion(state, action.childId, challenge.id, date)) return state;
       const reward = computeReward(state.scoringConfig, challenge.difficulty, challenge.category);
       if (challenge.requiresApproval) {
         const completion: ChallengeCompletion = {
@@ -394,6 +410,10 @@ interface StoreContextValue {
   state: AppState;
   dispatch: (action: Action) => void;
   loading: boolean;
+  loadError: boolean;
+  retryLoad: () => void;
+  syncError: boolean;
+  dismissSyncError: () => void;
 }
 
 const StoreContext = createContext<StoreContextValue | null>(null);
@@ -401,24 +421,36 @@ const StoreContext = createContext<StoreContextValue | null>(null);
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, reactDispatch] = useReducer(reducer, undefined, () => (isSupabaseConfigured ? buildInitialState() : loadInitialState()));
   const [loading, setLoading] = useState(isSupabaseConfigured);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [syncError, setSyncError] = useState(false);
   const stateRef = useRef(state);
   stateRef.current = state;
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
     let cancelled = false;
+    setLoading(true);
+    setLoadError(false);
     fetchAppState()
       .then((remote) => {
-        if (!cancelled && remote) reactDispatch({ type: 'HYDRATE', state: remote });
+        if (cancelled) return;
+        if (remote) reactDispatch({ type: 'HYDRATE', state: remote });
+        else setLoadError(true);
       })
-      .catch((err) => console.error('Failed to load Family Quest data from Supabase', err))
+      .catch((err) => {
+        console.error('Failed to load Family Quest data from Supabase', err);
+        // Never fall through to the built-in demo children: anything done on
+        // them can't be saved to the real family's data.
+        if (!cancelled) setLoadError(true);
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadAttempt]);
 
   useEffect(() => {
     // localStorage remains the persistence layer only when Supabase isn't
@@ -434,13 +466,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (action.type === 'COMPLETE_TASK' && !action.completionId) finalAction = { ...action, completionId: makeId() };
     if (action.type === 'REDEEM_REWARD' && !action.redemptionId) finalAction = { ...action, redemptionId: makeId() };
     if (action.type === 'SELECT_EGG' && !action.childEggId) finalAction = { ...action, childEggId: makeId() };
+
+    const prevState = stateRef.current;
+    const nextState = reducer(prevState, finalAction);
+    // Advance the ref immediately so a second dispatch in the same tick (a
+    // double tap) is evaluated against the updated state, not a stale one.
+    stateRef.current = nextState;
     reactDispatch(finalAction);
+
+    // The reducer refused the action (duplicate completion, unaffordable
+    // reward, …) — nothing to mirror.
+    if (nextState === prevState) return;
     if (isSupabaseConfigured) {
-      syncActionToSupabase(finalAction, stateRef.current).catch((err) => console.error('Supabase sync failed', err));
+      syncActionToSupabase(finalAction, prevState, nextState).catch((err) => {
+        console.error('Supabase sync failed', err);
+        setSyncError(true);
+      });
     }
   }, []);
 
-  const value = useMemo(() => ({ state, dispatch, loading }), [state, loading, dispatch]);
+  const retryLoad = useCallback(() => setLoadAttempt((n) => n + 1), []);
+  const dismissSyncError = useCallback(() => setSyncError(false), []);
+
+  const value = useMemo(
+    () => ({ state, dispatch, loading, loadError, retryLoad, syncError, dismissSyncError }),
+    [state, loading, loadError, retryLoad, syncError, dismissSyncError, dispatch],
+  );
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 

@@ -72,10 +72,10 @@ export function KidHome({ child, onOpenTask }: Props) {
                 <div className="quest-reward">
                   {completion?.status === 'awaiting_approval'
                     ? t(lang, 'waitingApproval')
-                    : `+${reward.stars} ⭐ +${reward.xp} XP`}
+                    : <span dir="ltr">{`+${reward.stars} ⭐ +${reward.xp} XP`}</span>}
                 </div>
               </div>
-              {reward.bonusApplied && !done && <span className="bonus-pill">+{reward.bonusPct}%</span>}
+              {reward.bonusApplied && !done && <span className="bonus-pill" dir="ltr">+{reward.bonusPct}%</span>}
               <span className={`status-circle ${done ? 'done' : 'empty'}`}>{done ? '✓' : ''}</span>
             </button>
           );

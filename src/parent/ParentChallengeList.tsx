@@ -22,12 +22,24 @@ export function ParentChallengeList() {
     }
   }
 
+  // Deleting a challenge removes every completion of it too (the database
+  // cascades), wiping the kids' history for it — so confirm, and point at
+  // the non-destructive "turn off" instead.
+  function confirmDelete(challenge: { id: string; title: string }) {
+    const historyCount = state.completions.filter((c) => c.challengeId === challenge.id).length;
+    const warning =
+      historyCount > 0
+        ? `Delete "${challenge.title}"? This also permanently deletes its ${historyCount} completion(s) from the kids' history.\n\nTo keep the history, cancel and switch it Off instead.`
+        : `Delete "${challenge.title}"? This can't be undone.`;
+    if (confirm(warning)) dispatch({ type: 'DELETE_CHALLENGE', challengeId: challenge.id });
+  }
+
   return (
     <>
       <div className="screen-header">Manage Quests</div>
       <div className="screen-subheader">
-        Turn quests on or off per kid — a paused quest stays off every day until you turn it back on. Nothing is
-        deleted, so history is kept.
+        Turn quests on or off per kid — a paused quest stays off every day until you turn it back on, and its history
+        is kept. Deleting a quest you created also deletes its history, so prefer turning it off.
       </div>
 
       {state.children.map((child) => {
@@ -87,7 +99,7 @@ export function ParentChallengeList() {
                         {challenge.createdBy === 'parent' && (
                           <button
                             className="small-btn btn-danger"
-                            onClick={() => dispatch({ type: 'DELETE_CHALLENGE', challengeId: challenge.id })}
+                            onClick={() => confirmDelete(challenge)}
                           >
                             Delete
                           </button>
@@ -112,7 +124,7 @@ export function ParentChallengeList() {
             <div key={challenge.id} className="approval-row">
               <div className="quest-title">{challenge.title}</div>
               {challenge.createdBy === 'parent' && (
-                <button className="small-btn btn-danger" onClick={() => dispatch({ type: 'DELETE_CHALLENGE', challengeId: challenge.id })}>
+                <button className="small-btn btn-danger" onClick={() => confirmDelete(challenge)}>
                   Delete
                 </button>
               )}

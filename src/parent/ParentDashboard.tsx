@@ -12,6 +12,16 @@ function AdjustBalanceCard() {
   const [stars, setStars] = useState<string>(String(child?.stars ?? 0));
   const [xp, setXp] = useState<string>(String(child?.xp ?? 0));
   const [reason, setReason] = useState('');
+  // Keep the fields in step with the live balance (e.g. an approval or a
+  // completion landed after this card was opened), so saving can't write
+  // back a stale number.
+  const [shownBalance, setShownBalance] = useState(`${child?.stars}-${child?.xp}`);
+  const liveBalance = `${child?.stars}-${child?.xp}`;
+  if (liveBalance !== shownBalance) {
+    setShownBalance(liveBalance);
+    setStars(String(child?.stars ?? 0));
+    setXp(String(child?.xp ?? 0));
+  }
   const [saved, setSaved] = useState(false);
 
   function selectChild(id: string) {
@@ -33,9 +43,11 @@ function AdjustBalanceCard() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const starsNum = Number(stars);
-    const xpNum = Number(xp);
-    if (!childId || Number.isNaN(starsNum) || Number.isNaN(xpNum)) return;
+    // An emptied field must not silently mean "set to 0", and balances can't be negative.
+    if (stars.trim() === '' || xp.trim() === '') return;
+    const starsNum = Math.floor(Number(stars));
+    const xpNum = Math.floor(Number(xp));
+    if (!childId || Number.isNaN(starsNum) || Number.isNaN(xpNum) || starsNum < 0 || xpNum < 0) return;
     applyBalance(starsNum, xpNum, reason.trim());
   }
 
@@ -64,11 +76,11 @@ function AdjustBalanceCard() {
         <div style={{ display: 'flex', gap: 8 }}>
           <div className="form-group" style={{ flex: 1 }}>
             <label className="form-label">Stars</label>
-            <input className="form-input" type="number" value={stars} onChange={(e) => setStars(e.target.value)} />
+            <input className="form-input" type="number" min={0} required value={stars} onChange={(e) => setStars(e.target.value)} />
           </div>
           <div className="form-group" style={{ flex: 1 }}>
             <label className="form-label">XP</label>
-            <input className="form-input" type="number" value={xp} onChange={(e) => setXp(e.target.value)} />
+            <input className="form-input" type="number" min={0} required value={xp} onChange={(e) => setXp(e.target.value)} />
           </div>
         </div>
         <div className="form-group">

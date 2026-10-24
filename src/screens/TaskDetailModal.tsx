@@ -33,28 +33,40 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
     [challenge.quiz, challenge.id],
   );
 
+  // One submission per modal: guards a double tap on "done"/"got it" during
+  // the 1.3s confirmation before the modal closes.
+  const submittedRef = useRef(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+  }, []);
+
   function handleMarkComplete(noteText?: string) {
+    if (submittedRef.current) return;
+    submittedRef.current = true;
     dispatch({ type: 'COMPLETE_TASK', childId, challengeId: challenge.id, note: noteText });
-    if (challenge.requiresApproval) {
-      setSubmitted(true);
-      setTimeout(onClose, 1300);
-    } else {
-      // A brief, visible "done!" moment — closing instantly with zero
-      // feedback reads as broken ("nothing happened") even though the
-      // completion went through.
-      setJustCompleted(true);
-      setTimeout(onClose, 1300);
-    }
+    // A brief, visible "done!" / "waiting for approval" moment — closing
+    // instantly with zero feedback reads as broken ("nothing happened").
+    if (challenge.requiresApproval) setSubmitted(true);
+    else setJustCompleted(true);
+    closeTimerRef.current = setTimeout(onClose, 1300);
   }
 
   function handleQuizFinish(correctCount: number, totalQuestions: number, details: QuizAnswerDetail[]) {
+    if (submittedRef.current) return;
+    submittedRef.current = true;
     dispatch({ type: 'COMPLETE_QUIZ', childId, challengeId: challenge.id, correctCount, totalQuestions, details });
   }
 
+  // Games and quizzes hold progress that a stray tap outside the card would
+  // throw away (a 5-year-old taps everywhere) — only the × closes those.
+  const backdropCloses = challenge.kind === 'selfreport' || challenge.kind === 'discovery';
+  const finished = justCompleted || submitted;
+
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop" onClick={backdropCloses ? onClose : undefined}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose} aria-label="Close">
+        <button className="modal-close" onClick={onClose} aria-label={t(lang, 'close')}>
           ×
         </button>
         <span className="quest-tag" style={{ background: CATEGORY_COLOR[challenge.category] }}>
@@ -64,20 +76,24 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
         <div className="modal-desc">{localized.description}</div>
 
         {reward.bonusApplied && (
-          <div className="reward-preview">⭐ +{reward.stars} · ⚡ +{reward.xp} XP — {reward.bonusPct}% helping-others bonus!</div>
+          <div className="reward-preview">
+            <span dir="ltr">⭐ +{reward.stars} · ⚡ +{reward.xp} XP</span> — {reward.bonusPct}% {t(lang, 'helpingBonus')}
+          </div>
         )}
 
         {justCompleted && (
           <div style={{ textAlign: 'center', padding: '10px 0' }}>
             <div style={{ fontSize: 40 }}>🎉</div>
             <div className="feedback-msg right">{t(lang, 'niceWork')}</div>
-            <div className="reward-preview">
+            <div className="reward-preview" dir="ltr">
               +{reward.stars} ⭐ · +{reward.xp} XP
             </div>
           </div>
         )}
 
-        {!justCompleted && challenge.kind === 'quiz' && dailyQuestions.length > 0 && (
+        {submitted && <div className="feedback-msg right">{t(lang, 'submitWaitingApproval')}</div>}
+
+        {!finished && challenge.kind === 'quiz' && dailyQuestions.length > 0 && (
           <QuizBody
             questions={dailyQuestions}
             category={challenge.category}
@@ -88,7 +104,7 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
           />
         )}
 
-        {!justCompleted && challenge.kind === 'draw' && (
+        {!finished && challenge.kind === 'draw' && (
           <DrawBody
             onDone={(note) => handleMarkComplete(note)}
             lang={lang}
@@ -97,9 +113,9 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
           />
         )}
 
-        {!justCompleted && challenge.kind === 'memory' && (
+        {!finished && challenge.kind === 'memory' && (
           <MemoryBody
-            symbols={challenge.memorySymbols && challenge.memorySymbols.length > 0 ? challenge.memorySymbols : DEFAULT_MEMORY_SYMBOLS}
+            symbols={challenge.memorySymbols && challenge.memorySymbols.length >= 3 ? challenge.memorySymbols : DEFAULT_MEMORY_SYMBOLS}
             difficulty={challenge.difficulty}
             seedKey={`${challenge.id}-${childId}-${todayISO()}`}
             lang={lang}
@@ -107,7 +123,7 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
           />
         )}
 
-        {!justCompleted && challenge.kind === 'bigger' && (
+        {!finished && challenge.kind === 'bigger' && (
           <BiggerBody
             icons={challenge.comparisonIcons && challenge.comparisonIcons.length >= 2 ? challenge.comparisonIcons : bigIconPool}
             seedKey={`${challenge.id}-${childId}-${todayISO()}`}
@@ -116,7 +132,7 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
           />
         )}
 
-        {!justCompleted && challenge.kind === 'missing' && (
+        {!finished && challenge.kind === 'missing' && (
           <MissingBody
             icons={challenge.missingIcons && challenge.missingIcons.length >= 8 ? challenge.missingIcons : bigIconPool}
             seedKey={`${challenge.id}-${childId}-${todayISO()}`}
@@ -125,12 +141,9 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
           />
         )}
 
-        {!justCompleted && challenge.kind === 'discovery' && <DiscoveryBody onDone={(noteText) => handleMarkComplete(noteText)} lang={lang} />}
+        {!finished && challenge.kind === 'discovery' && <DiscoveryBody onDone={(noteText) => handleMarkComplete(noteText)} lang={lang} />}
 
-        {!justCompleted && challenge.kind === 'selfreport' &&
-          (submitted ? (
-            <div className="feedback-msg right">{t(lang, 'submitWaitingApproval')}</div>
-          ) : (
+        {!finished && challenge.kind === 'selfreport' && (
             <div>
               {helpingOthers && (
                 <textarea
@@ -149,7 +162,7 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
                 {t(lang, 'markComplete')} · +{reward.stars} ⭐
               </button>
             </div>
-          ))}
+          )}
       </div>
     </div>
   );
@@ -236,9 +249,9 @@ function QuizBody({
     return (
       <div>
         <div className="modal-desc" style={{ fontWeight: 800, color: 'var(--text-heading)' }}>
-          🎉 {correctCount} / {questions.length} correct
+          🎉 <span dir="ltr">{correctCount} / {questions.length}</span> {t(lang, 'correctWord')}
         </div>
-        <div className="feedback-msg right">
+        <div className="feedback-msg right" dir="ltr">
           +{reward.stars} ⭐ · +{reward.xp} XP
         </div>
       </div>
@@ -385,8 +398,13 @@ function DrawBody({
   }, [prompt]);
 
   function getPos(canvas: HTMLCanvasElement, e: React.PointerEvent) {
+    // The canvas is displayed scaled to the card width, so convert screen
+    // pixels to the canvas's own pixel grid or strokes land off the finger.
     const rect = canvas.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    return {
+      x: ((e.clientX - rect.left) * canvas.width) / rect.width,
+      y: ((e.clientY - rect.top) * canvas.height) / rect.height,
+    };
   }
 
   function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
