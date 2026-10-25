@@ -44,7 +44,7 @@ export default function CategoryForm({ category }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          slug: form.slug || form.name.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^\w-]/g, ""),
+          slug: form.slug.trim() || undefined,
           description: form.description || null,
           image_url: form.image_url || null,
         }),

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { requireAdmin } from "@/lib/auth/requireAdmin"
+import { sanitizeCouponInput } from "@/lib/coupons/input"
 
 export async function GET() {
   if (!(await requireAdmin())) {
@@ -20,28 +21,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
   try {
-    const body = await request.json()
+    const parsed = sanitizeCouponInput(await request.json())
+    if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 })
     const admin = createAdminClient()
-    const { data, error } = await admin
-      .from("coupons")
-      .insert({
-        code: (body.code as string).toUpperCase().trim(),
-        type: body.type,
-        value: body.value,
-        min_order_amount: body.min_order_amount || null,
-        max_uses: body.max_uses || null,
-        valid_from: body.valid_from,
-        valid_until: body.valid_until,
-        product_ids: body.product_ids?.length ? body.product_ids : null,
-        category_ids: body.category_ids?.length ? body.category_ids : null,
-        is_active: body.is_active ?? true,
-      })
-      .select()
-      .single()
-    if (error) throw error
+    const { data, error } = await admin.from("coupons").insert(parsed.data).select().single()
+    if (error) {
+      if (error.code === "23505") return NextResponse.json({ error: "A coupon with this code already exists" }, { status: 409 })
+      throw error
+    }
     return NextResponse.json(data, { status: 201 })
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Failed to create coupon"
-    return NextResponse.json({ error: msg }, { status: 500 })
+    console.error("Create coupon error:", err)
+    return NextResponse.json({ error: "Failed to create coupon" }, { status: 500 })
   }
 }

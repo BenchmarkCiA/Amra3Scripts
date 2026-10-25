@@ -1,11 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { useCart } from "@/hooks/useCart"
+import { useCart, lineKey } from "@/hooks/useCart"
 import { formatPrice } from "@/lib/utils/currency"
 
 export default function CheckoutPage() {
-  const { items, total, couponCode, discountAmount } = useCart()
+  const { items, total, couponCode, discountAmount, hasHydrated } = useCart()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
@@ -36,6 +36,10 @@ export default function CheckoutPage() {
     setLoading(false)
   }
 
+  if (!hasHydrated) {
+    return <div className="max-w-4xl mx-auto px-4 py-24" aria-busy="true" />
+  }
+
   if (!items.length) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-24 text-center">
@@ -57,7 +61,7 @@ export default function CheckoutPage() {
           <h2 className="font-semibold text-lg mb-4">Order Summary</h2>
           <ul className="divide-y divide-border">
             {items.map((item) => (
-              <li key={item.variant_id} className="py-4 flex justify-between gap-4">
+              <li key={lineKey(item)} className="py-4 flex justify-between gap-4">
                 <div className="flex gap-3">
                   {item.image_url && (
                     // eslint-disable-next-line @next/next/no-img-element

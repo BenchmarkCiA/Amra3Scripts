@@ -2,7 +2,7 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import CouponActions from "@/components/admin/CouponActions"
+import AdminRowActions from "@/components/admin/AdminRowActions"
 
 export const dynamic = "force-dynamic"
 
@@ -77,7 +77,15 @@ export default async function CouponsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <CouponActions id={c.id} isActive={c.is_active} />
+                      <AdminRowActions
+                        editHref={`/admin/coupons/${c.id}`}
+                        apiPath={`/api/admin/coupons/${c.id}`}
+                        isActive={c.is_active}
+                        itemLabel={`coupon ${c.code}`}
+                        activateLabel="Activate"
+                        deactivateLabel="Deactivate"
+                        deleteConfirm={`Delete coupon ${c.code}? This cannot be undone.`}
+                      />
                     </td>
                   </tr>
                 )

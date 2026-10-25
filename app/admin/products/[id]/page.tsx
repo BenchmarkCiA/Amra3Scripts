@@ -22,7 +22,6 @@ export default async function EditProductPage({ params }: Props) {
     supabase
       .from("categories")
       .select("id, name")
-      .eq("is_active", true)
       .order("name"),
     supabase
       .from("product_reviews")
@@ -60,7 +59,9 @@ export default async function EditProductPage({ params }: Props) {
           country_codes: product.country_codes ?? null,
           allow_personalization: product.allow_personalization ?? false,
           limited_time_label: product.limited_time_label ?? null,
-          variants: (product.variants ?? []).map((v: {
+          // Hidden (removed) variants stay in the DB for order history but not in the editor
+          variants: (product.variants ?? []).filter((v: { is_available: boolean }) => v.is_available).map((v: {
+            id: string
             title: string
             sku: string | null
             price: number
@@ -68,6 +69,7 @@ export default async function EditProductPage({ params }: Props) {
             inventory: number
             options: Record<string, string>
           }) => ({
+            id: v.id,
             title: v.title,
             sku: v.sku,
             price: v.price,

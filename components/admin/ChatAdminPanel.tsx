@@ -39,18 +39,38 @@ export default function ChatAdminPanel({
   const [savedSettings, setSavedSettings] = useState(false)
   const [savingFaqs, setSavingFaqs] = useState(false)
   const [savedFaqs, setSavedFaqs] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  // Snapshot so "Cancel" really discards in-progress FAQ edits
+  const [faqSnapshot, setFaqSnapshot] = useState<FAQ | null>(null)
+
+  const patchChat = async (body: object): Promise<boolean> => {
+    setSaveError(null)
+    try {
+      const res = await fetch("/api/admin/chat", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setSaveError(data.error ?? "Save failed")
+        return false
+      }
+      return true
+    } catch {
+      setSaveError("Network error — changes were not saved")
+      return false
+    }
+  }
 
   const [tab, setTab] = useState<"settings" | "messages">("settings")
 
   const saveSettings = async () => {
     setSavingSettings(true)
     setSavedSettings(false)
-    await fetch("/api/admin/chat", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "settings", value: settings }),
-    })
+    const ok = await patchChat({ type: "settings", value: settings })
     setSavingSettings(false)
+    if (!ok) return
     setSavedSettings(true)
     setTimeout(() => setSavedSettings(false), 2000)
   }
@@ -58,12 +78,9 @@ export default function ChatAdminPanel({
   const saveFaqs = async (updated: FAQ[]) => {
     setSavingFaqs(true)
     setSavedFaqs(false)
-    await fetch("/api/admin/chat", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "faqs", value: updated }),
-    })
+    const ok = await patchChat({ type: "faqs", value: updated })
     setSavingFaqs(false)
+    if (!ok) return
     setSavedFaqs(true)
     setTimeout(() => setSavedFaqs(false), 2000)
   }
@@ -78,6 +95,7 @@ export default function ChatAdminPanel({
   }
 
   const deleteFaq = (id: string) => {
+    if (!confirm("Delete this FAQ entry?")) return
     const updated = faqs.filter(f => f.id !== id)
     setFaqs(updated)
     saveFaqs(updated)
@@ -87,24 +105,38 @@ export default function ChatAdminPanel({
     setFaqs(prev => prev.map(f => f.id === id ? { ...f, [field]: value } : f))
   }
 
-  const saveFaqEdit = (id: string) => {
+  const startFaqEdit = (faq: FAQ) => {
+    setFaqSnapshot(faq)
+    setEditingFaq(faq.id)
+  }
+
+  const cancelFaqEdit = () => {
+    if (faqSnapshot) setFaqs(prev => prev.map(f => f.id === faqSnapshot.id ? faqSnapshot : f))
+    setFaqSnapshot(null)
     setEditingFaq(null)
+  }
+
+  const saveFaqEdit = () => {
+    setEditingFaq(null)
+    setFaqSnapshot(null)
     saveFaqs(faqs)
   }
 
   const markRead = async (id: string) => {
-    await fetch("/api/admin/chat", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "mark_read", id }),
-    })
-    setMessages(prev => prev.map(m => m.id === id ? { ...m, is_read: true } : m))
+    if (await patchChat({ type: "mark_read", id })) {
+      setMessages(prev => prev.map(m => m.id === id ? { ...m, is_read: true } : m))
+    }
   }
 
   const unread = messages.filter(m => !m.is_read).length
 
   return (
     <div>
+      {saveError && (
+        <p role="alert" className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          {saveError}
+        </p>
+      )}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold">Chat Widget</h1>
@@ -236,20 +268,21 @@ export default function ChatAdminPanel({
                           placeholder="Answer"
                         />
                         <div className="flex gap-2">
-                          <button onClick={() => saveFaqEdit(faq.id)} className="text-xs text-accent hover:underline font-medium">Save</button>
-                          <button onClick={() => setEditingFaq(null)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
+                          <button onClick={saveFaqEdit} className="text-xs text-accent hover:underline font-medium">Save</button>
+                          <button onClick={cancelFaqEdit} className="text-xs text-muted-foreground hover:underline">Cancel</button>
                         </div>
                       </>
                     ) : (
                       <>
                         <p className="text-sm font-medium">{faq.question}</p>
                         <p className="text-xs text-muted-foreground">{faq.answer}</p>
-                        <button onClick={() => setEditingFaq(faq.id)} className="self-start text-xs text-accent hover:underline">Edit</button>
+                        <button onClick={() => startFaqEdit(faq)} className="self-start text-xs text-accent hover:underline">Edit</button>
                       </>
                     )}
                   </div>
                   <button
                     onClick={() => deleteFaq(faq.id)}
+                    aria-label={`Delete FAQ: ${faq.question}`}
                     className="text-muted-foreground hover:text-destructive transition-colors shrink-0 mt-1"
                   >
                     <Trash2 className="w-4 h-4" />

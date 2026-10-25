@@ -1,6 +1,6 @@
 import { printify } from "./client"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { slugify } from "@/lib/utils/slug"
+import { slugOrFallback } from "@/lib/utils/slug"
 
 interface PrintifyVariant {
   id: number
@@ -39,7 +39,7 @@ export async function syncPrintifyProducts(): Promise<{ synced: number; errors: 
 
     for (const p of products) {
       try {
-        const slug = slugify(p.title)
+        const slug = slugOrFallback(p.title, "product")
         const images = p.images.map((img, i) => ({
           url: img.src,
           alt: p.title,

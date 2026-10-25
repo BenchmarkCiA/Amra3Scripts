@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { X, Minus, Plus, Trash2, Tag } from "lucide-react"
 import Link from "next/link"
-import { useCart } from "@/hooks/useCart"
+import { useCart, lineKey, MAX_QTY } from "@/hooks/useCart"
 import { formatPrice } from "@/lib/utils/currency"
 
 /** Trap focus within `container` when `active`. */
@@ -39,7 +39,7 @@ function useFocusTrap(containerRef: React.RefObject<HTMLElement | null>, active:
 }
 
 export default function CartDrawer() {
-  const { items, isOpen, closeCart, removeItem, updateQuantity, total, couponCode, discountAmount, applyCoupon, removeCoupon } = useCart()
+  const { items, isOpen, closeCart, removeItem, updateQuantity, total, couponCode, discountAmount, couponMessage, applyCoupon, removeCoupon } = useCart()
   const [couponInput, setCouponInput] = useState("")
   const [couponError, setCouponError] = useState("")
   const [couponLoading, setCouponLoading] = useState(false)
@@ -115,7 +115,7 @@ export default function CartDrawer() {
           ) : (
             <ul className="flex flex-col gap-6" aria-label="Cart items">
               {items.map((item) => (
-                <li key={item.variant_id} className="flex gap-4">
+                <li key={lineKey(item)} className="flex gap-4">
                   <div className="w-20 h-20 rounded-lg bg-muted shrink-0 overflow-hidden">
                     {item.image_url && (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -133,7 +133,7 @@ export default function CartDrawer() {
                     <p className="text-sm font-semibold mt-1">{formatPrice(item.price, "USD")}</p>
                     <div className="flex items-center gap-2 mt-2">
                       <button
-                        onClick={() => updateQuantity(item.variant_id, item.quantity - 1)}
+                        onClick={() => updateQuantity(lineKey(item), item.quantity - 1)}
                         aria-label={`Decrease quantity of ${item.title}${item.variant_title ? `, ${item.variant_title}` : ""}`}
                         className="w-7 h-7 rounded border border-border flex items-center justify-center hover:bg-muted transition-colors"
                       >
@@ -141,14 +141,15 @@ export default function CartDrawer() {
                       </button>
                       <span aria-label={`Quantity: ${item.quantity}`} className="text-sm font-medium w-6 text-center">{item.quantity}</span>
                       <button
-                        onClick={() => updateQuantity(item.variant_id, item.quantity + 1)}
+                        onClick={() => updateQuantity(lineKey(item), item.quantity + 1)}
+                        disabled={item.quantity >= MAX_QTY}
                         aria-label={`Increase quantity of ${item.title}${item.variant_title ? `, ${item.variant_title}` : ""}`}
                         className="w-7 h-7 rounded border border-border flex items-center justify-center hover:bg-muted transition-colors"
                       >
                         <Plus className="w-3 h-3" aria-hidden="true" />
                       </button>
                       <button
-                        onClick={() => removeItem(item.variant_id)}
+                        onClick={() => removeItem(lineKey(item))}
                         aria-label={`Remove ${item.title}${item.variant_title ? `, ${item.variant_title}` : ""} from cart`}
                         className="ml-2 p-1 text-muted-foreground hover:text-destructive transition-colors"
                       >
@@ -165,6 +166,11 @@ export default function CartDrawer() {
         {/* Footer */}
         {items.length > 0 && (
           <div className="px-6 py-4 border-t border-border space-y-4">
+            {couponMessage && (
+              <p role="status" className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                {couponMessage}
+              </p>
+            )}
             {/* Coupon section */}
             {couponCode ? (
               <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-3 py-2">

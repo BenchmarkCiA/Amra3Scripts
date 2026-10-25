@@ -2,7 +2,7 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import CategoryActions from "@/components/admin/CategoryActions"
+import AdminRowActions from "@/components/admin/AdminRowActions"
 
 export const dynamic = "force-dynamic"
 
@@ -61,7 +61,15 @@ export default async function CategoriesPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <CategoryActions id={cat.id} isActive={cat.is_active} />
+                    <AdminRowActions
+                      editHref={`/admin/categories/${cat.id}`}
+                      apiPath={`/api/admin/categories/${cat.id}`}
+                      isActive={cat.is_active}
+                      itemLabel={cat.name}
+                      activateLabel="Show"
+                      deactivateLabel="Hide"
+                      deleteConfirm={`Delete category "${cat.name}"? Products in it are kept but become uncategorized.`}
+                    />
                   </td>
                 </tr>
               ))}

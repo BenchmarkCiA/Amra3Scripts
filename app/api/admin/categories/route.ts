@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { requireAdmin } from "@/lib/auth/requireAdmin"
+import { slugify, slugOrFallback } from "@/lib/utils/slug"
 
 export async function GET() {
   if (!(await requireAdmin())) {
@@ -21,17 +22,16 @@ export async function POST(request: NextRequest) {
   }
   try {
     const body = await request.json()
+    if (typeof body.name !== "string" || !body.name.trim()) {
+      return NextResponse.json({ error: "Name is required" }, { status: 400 })
+    }
     const admin = createAdminClient()
-    const slug = (body.name as string)
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, "-")
-      .replace(/[^\w-]/g, "")
+    const slug = slugOrFallback(body.name, "category")
     const { data, error } = await admin
       .from("categories")
       .insert({
         name: body.name.trim(),
-        slug: body.slug?.trim() || slug,
+        slug: (typeof body.slug === "string" && slugify(body.slug)) || slug,
         description: body.description || null,
         image_url: body.image_url || null,
         position: body.position ?? 0,

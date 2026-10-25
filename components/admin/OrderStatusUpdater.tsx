@@ -20,23 +20,36 @@ export default function OrderStatusUpdater({
   const [status, setStatus] = useState(currentStatus ?? "")
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleSave = async () => {
     setSaving(true)
     setSaved(false)
-    await fetch(`/api/admin/orders/${orderId}/status`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ customer_status: status || null }),
-    })
-    setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    setError(null)
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customer_status: status || null }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setError(data.error ?? "Could not update status")
+        return
+      }
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch {
+      setError("Network error — please try again")
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
     <div className="flex items-center gap-3">
       <select
+        aria-label="Customer-facing order status"
         value={status}
         onChange={e => { setStatus(e.target.value); setSaved(false) }}
         className="border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent bg-white flex-1 max-w-xs"
@@ -52,9 +65,13 @@ export default function OrderStatusUpdater({
       >
         {saving ? "Saving…" : saved ? "✓ Saved" : "Update Status"}
       </button>
-      <p className="text-xs text-muted-foreground">
-        This is what the customer sees in their account.
-      </p>
+      {error ? (
+        <p role="alert" className="text-xs text-red-700">{error}</p>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          This is what the customer sees in their account.
+        </p>
+      )}
     </div>
   )
 }

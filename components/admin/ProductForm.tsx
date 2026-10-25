@@ -8,6 +8,7 @@ import Image from "next/image"
 interface Category { id: string; name: string }
 
 interface Variant {
+  id?: string
   title: string
   sku: string
   price: string
@@ -40,6 +41,7 @@ interface InitialProduct {
   allow_personalization: boolean
   limited_time_label: string | null
   variants: {
+    id: string
     title: string
     sku: string | null
     price: number
@@ -73,9 +75,7 @@ export default function ProductForm({ categories, product }: Props) {
   const [title, setTitle] = useState(product?.title ?? "")
   const [description, setDescription] = useState(product?.description ?? "")
   const [categoryId, setCategoryId] = useState(product?.category_id ?? "")
-  const [status, setStatus] = useState<"draft" | "active">(
-    (product?.status === "active" ? "active" : "draft")
-  )
+  const [status, setStatus] = useState<"draft" | "active" | "archived">(product?.status ?? "draft")
   const [isFeatured, setIsFeatured] = useState(product?.is_featured ?? false)
   const [allowPersonalization, setAllowPersonalization] = useState(product?.allow_personalization ?? false)
   const [limitedTimeLabel, setLimitedTimeLabel] = useState(product?.limited_time_label ?? "")
@@ -86,12 +86,14 @@ export default function ProductForm({ categories, product }: Props) {
   const [images, setImages] = useState<{ url: string; alt: string }[]>(product?.images ?? [])
   const [selectedRegions, setSelectedRegions] = useState<string[]>(product?.country_codes ?? [])
   const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const dragIndex = useRef<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
   const [variants, setVariants] = useState<Variant[]>(
     product?.variants?.length
       ? product.variants.map(v => ({
+          id: v.id,
           title: v.title,
           sku: v.sku ?? "",
           price: String(v.price),
@@ -106,17 +108,31 @@ export default function ProductForm({ categories, product }: Props) {
     const files = e.target.files
     if (!files?.length) return
     setUploading(true)
-    for (const file of Array.from(files)) {
-      const form = new FormData()
-      form.append("file", file)
-      const res = await fetch("/api/upload", { method: "POST", body: form })
-      const data = await res.json()
-      if (data.url) {
-        setImages((prev) => [...prev, { url: data.url, alt: title || file.name }])
+    setUploadError(null)
+    const failed: string[] = []
+    try {
+      for (const file of Array.from(files)) {
+        try {
+          const form = new FormData()
+          form.append("file", file)
+          const res = await fetch("/api/upload", { method: "POST", body: form })
+          const data = await res.json().catch(() => ({}))
+          if (res.ok && data.url) {
+            setImages((prev) => prev.some((p) => p.url === data.url)
+              ? prev
+              : [...prev, { url: data.url, alt: title || file.name }])
+          } else {
+            failed.push(`${file.name}: ${data.error ?? "upload failed"}`)
+          }
+        } catch {
+          failed.push(`${file.name}: network error`)
+        }
       }
+    } finally {
+      setUploading(false)
+      e.target.value = ""
+      if (failed.length) setUploadError(failed.join(" · "))
     }
-    setUploading(false)
-    e.target.value = ""
   }
 
   const removeImage = (i: number) =>
@@ -145,6 +161,10 @@ export default function ProductForm({ categories, product }: Props) {
     })
     dragIndex.current = null
     setDragOverIndex(null)
+  }
+
+  function onDragLeave(i: number) {
+    setDragOverIndex((cur) => (cur === i ? null : cur))
   }
 
   function onDragEnd() {
@@ -178,16 +198,19 @@ export default function ProductForm({ categories, product }: Props) {
     country_codes: selectedRegions.length ? selectedRegions : null,
     allow_personalization: allowPersonalization,
     limited_time_label: limitedTimeLabel.trim() || null,
-    variants: variants
-      .filter(v => v.title && v.price)
-      .map(v => ({
-        title: v.title,
+    variants: variants.map(v => {
+      const inv = parseInt(v.inventory, 10)
+      return {
+        ...(v.id ? { id: v.id } : {}),
+        title: v.title.trim(),
         sku: v.sku || null,
         price: parseFloat(v.price),
         compare_at_price: v.compare_at_price ? parseFloat(v.compare_at_price) : null,
-        inventory: parseInt(v.inventory) || -1,
+        // 0 means sold out; only blank/invalid means unlimited (-1)
+        inventory: Number.isNaN(inv) ? -1 : inv,
         options: v.options,
-      })),
+      }
+    }),
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -195,8 +218,9 @@ export default function ProductForm({ categories, product }: Props) {
     setError(null)
 
     if (!title.trim()) { setError("Title is required"); return }
-    if (!variants.some(v => v.price && parseFloat(v.price) > 0)) {
-      setError("At least one variant with a price is required")
+    const badIndex = variants.findIndex(v => !v.title.trim() || !(parseFloat(v.price) > 0))
+    if (badIndex !== -1) {
+      setError(`Variant ${badIndex + 1} needs a title and a price greater than 0`)
       return
     }
 
@@ -284,11 +308,12 @@ export default function ProductForm({ categories, product }: Props) {
             <label className="block text-sm font-medium mb-1">Status</label>
             <select
               value={status}
-              onChange={e => setStatus(e.target.value as "draft" | "active")}
+              onChange={e => setStatus(e.target.value as "draft" | "active" | "archived")}
               className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="draft">Draft</option>
               <option value="active">Active</option>
+              <option value="archived">Archived</option>
             </select>
           </div>
         </div>
@@ -352,6 +377,7 @@ export default function ProductForm({ categories, product }: Props) {
               onDragStart={() => onDragStart(i)}
               onDragOver={(e) => onDragOver(e, i)}
               onDrop={() => onDrop(i)}
+              onDragLeave={() => onDragLeave(i)}
               onDragEnd={onDragEnd}
               className={`relative w-24 h-24 rounded-lg overflow-hidden border-2 group cursor-grab active:cursor-grabbing transition-all ${
                 dragOverIndex === i
@@ -386,6 +412,7 @@ export default function ProductForm({ categories, product }: Props) {
               <button
                 type="button"
                 onClick={() => removeImage(i)}
+                aria-label={`Remove image ${i + 1}`}
                 className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <X className="w-3 h-3" />
@@ -396,9 +423,15 @@ export default function ProductForm({ categories, product }: Props) {
           <label className={`w-24 h-24 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-accent transition-colors ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
             <Upload className="w-4 h-4 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">{uploading ? "Uploading..." : "Add image"}</span>
-            <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" multiple className="hidden" onChange={handleImageUpload} />
           </label>
         </div>
+
+        {uploadError && (
+          <p role="alert" className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            {uploadError}
+          </p>
+        )}
 
         <p className="text-xs text-muted-foreground">First image (highlighted) is the product thumbnail. Drag to reorder or click ★ to set as primary.</p>
       </section>
@@ -423,7 +456,7 @@ export default function ProductForm({ categories, product }: Props) {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-muted-foreground">Variant {i + 1}</span>
                 {variants.length > 1 && (
-                  <button type="button" onClick={() => removeVariant(i)} className="text-muted-foreground hover:text-destructive transition-colors">
+                  <button type="button" onClick={() => removeVariant(i)} aria-label={`Remove variant ${i + 1}`} className="text-muted-foreground hover:text-destructive transition-colors">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 )}

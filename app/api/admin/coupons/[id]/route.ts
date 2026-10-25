@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { requireAdmin } from "@/lib/auth/requireAdmin"
+import { sanitizeCouponInput } from "@/lib/coupons/input"
 
 export async function PATCH(
   request: NextRequest,
@@ -10,11 +11,13 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
   const { id } = await params
-  const body = await request.json()
+  // Whitelisted fields only — uses_count, id etc. can't be overwritten
+  const parsed = sanitizeCouponInput(await request.json(), true)
+  if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 })
   const admin = createAdminClient()
   const { data, error } = await admin
     .from("coupons")
-    .update(body)
+    .update(parsed.data)
     .eq("id", id)
     .select()
     .single()

@@ -7,6 +7,7 @@ import PopupWidget from "@/components/store/PopupWidget"
 import { ConsentProvider } from "@/components/consent/ConsentProvider"
 import ConsentBanner from "@/components/consent/ConsentBanner"
 import ConsentScripts from "@/components/consent/ConsentScripts"
+import CartHydrator from "@/components/store/CartHydrator"
 import type { ConsentMode } from "@/lib/consent/types"
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] })
@@ -41,6 +42,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <PopupWidget />
           <ConsentBanner />
           <ConsentScripts />
+          <CartHydrator />
         </ConsentProvider>
       </body>
     </html>

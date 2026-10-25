@@ -10,12 +10,14 @@ interface Props {
 }
 
 export default function ProductVariants({ product }: Props) {
-  const variants = product.variants ?? []
+  // Hidden (removed) variants stay in the DB for order history but are not sellable
+  const variants = (product.variants ?? []).filter((v) => v.is_available)
   const [selected, setSelected] = useState<ProductVariant | null>(
-    variants.find((v) => v.is_available) ?? null
+    variants.find((v) => v.inventory !== 0) ?? variants[0] ?? null
   )
   const [adding, setAdding] = useState(false)
   const [announcement, setAnnouncement] = useState("")
+  const [addError, setAddError] = useState("")
   const [customText, setCustomText] = useState("")
   const { addItem } = useCart()
   const personalId = useId()
@@ -28,9 +30,14 @@ export default function ProductVariants({ product }: Props) {
   const selectOption = (key: string, value: string) => {
     const current = { ...selected?.options }
     current[key] = value
-    const match = variants.find((v) =>
+    const exact = variants.find((v) =>
       Object.entries(current).every(([k, val]) => v.options[k] === val)
     )
+    // If that exact combination doesn't exist, still honor the click by picking the
+    // closest variant that has the chosen value (e.g. switch size even if color changes)
+    const fallback = variants.find((v) => v.options[key] === value && v.inventory !== 0)
+      ?? variants.find((v) => v.options[key] === value)
+    const match = exact ?? fallback
     if (match) setSelected(match)
   }
 
@@ -38,8 +45,13 @@ export default function ProductVariants({ product }: Props) {
     if (!selected) return
     setAdding(true)
     setAnnouncement("")
-    await addItem(product.id, selected.id, 1, customText.trim() || undefined)
+    setAddError("")
+    const result = await addItem(product.id, selected.id, 1, customText.trim() || undefined)
     setAdding(false)
+    if (!result.success) {
+      setAddError(result.message ?? "Could not add to cart")
+      return
+    }
     setAnnouncement(`${product.title} added to cart`)
     setTimeout(() => setAnnouncement(""), 3000)
   }
@@ -75,7 +87,7 @@ export default function ProductVariants({ product }: Props) {
             {getOptionValues(key).map((val) => {
               const isActive = selected?.options[key] === val
               const isAvailable = variants.some(
-                (v) => v.options[key] === val && v.is_available
+                (v) => v.options[key] === val && v.inventory !== 0
               )
               return (
                 <button
@@ -85,7 +97,7 @@ export default function ProductVariants({ product }: Props) {
                   onClick={() => selectOption(key, val)}
                   disabled={!isAvailable}
                   aria-disabled={!isAvailable}
-                  aria-label={`${val}${!isAvailable ? " — unavailable" : ""}`}
+                  aria-label={`${val}${!isAvailable ? " — sold out" : ""}`}
                   className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors min-w-[44px] min-h-[44px]
                     ${isActive ? "border-accent bg-accent text-white" : "border-border hover:border-accent"}
                     ${!isAvailable ? "opacity-40 cursor-not-allowed line-through" : ""}
@@ -124,13 +136,17 @@ export default function ProductVariants({ product }: Props) {
       {/* Add to cart */}
       <button
         onClick={handleAddToCart}
-        disabled={!selected || !selected.is_available || adding}
-        aria-disabled={!selected || !selected.is_available || adding}
+        disabled={!selected || selected.inventory === 0 || adding}
+        aria-disabled={!selected || selected.inventory === 0 || adding}
         className="w-full bg-primary text-primary-foreground py-4 rounded-xl font-semibold text-base
           hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {adding ? "Adding…" : "Add to Cart"}
+        {adding ? "Adding…" : selected?.inventory === 0 ? "Sold out" : "Add to Cart"}
       </button>
+
+      {addError && (
+        <p role="alert" className="text-sm text-red-700">{addError}</p>
+      )}
 
       {selected && selected.inventory > 0 && selected.inventory <= 5 && (
         <p className="text-warning text-sm" role="status">

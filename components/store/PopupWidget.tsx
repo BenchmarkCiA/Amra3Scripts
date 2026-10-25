@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { usePathname } from "next/navigation"
 import { X } from "lucide-react"
 import { safeHref } from "@/lib/utils/safeUrl"
+import { useConsent } from "@/components/consent/ConsentProvider"
 
 interface PopupSettings {
   enabled: boolean
@@ -25,14 +26,14 @@ const STORAGE_KEY = "otzma_popup_seen"
 function alreadySeen(frequency: string): boolean {
   if (frequency === "always") return false
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return false
-    const ts = parseInt(raw, 10)
+    // "session" is tracked only in sessionStorage — check it before localStorage
     if (frequency === "session") {
       return !!sessionStorage.getItem(STORAGE_KEY)
     }
     if (frequency === "day") {
-      return Date.now() - ts < 86_400_000
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (!raw) return false
+      return Date.now() - parseInt(raw, 10) < 86_400_000
     }
   } catch {
     // ignore storage errors
@@ -79,7 +80,11 @@ function DiscountTemplate({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, marketing_consent: consent }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error ?? "Something went wrong. Please try again.")
+        return
+      }
       setCoupon(data.coupon ?? null)
       setDone(true)
     } catch {
@@ -250,11 +255,16 @@ function NewsletterTemplate({
     setSubmitting(true)
     setError("")
     try {
-      await fetch("/api/popup/subscribe", {
+      const res = await fetch("/api/popup/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, marketing_consent: consent }),
       })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setError(data.error ?? "Something went wrong. Please try again.")
+        return
+      }
       setDone(true)
     } catch {
       setError("Something went wrong. Please try again.")
@@ -331,90 +341,112 @@ function NewsletterTemplate({
 
 // ─── Main PopupWidget ────────────────────────────────────────────────────────
 
+const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),textarea,select,[tabindex]:not([tabindex="-1"])'
+
 export default function PopupWidget() {
   const pathname = usePathname()
-  const [settings, setSettings] = useState<PopupSettings | null>(null)
+  const { bannerVisible } = useConsent()
+  const [config, setConfig] = useState<PopupSettings | null>(null)
   const [visible, setVisible] = useState(false)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const returnFocusRef = useRef<HTMLElement | null>(null)
 
-  const open = useCallback(() => {
-    setVisible(true)
+  // Fetch config once per page load, not on every navigation
+  useEffect(() => {
+    let cancelled = false
+    fetch("/api/popup/config")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((cfg: PopupSettings | null) => { if (!cancelled && cfg?.enabled) setConfig(cfg) })
+      .catch(() => {/* popup is optional */})
+    return () => { cancelled = true }
   }, [])
 
+  const eligible =
+    !!config &&
+    !pathname?.startsWith("/admin") &&
+    !pathname?.startsWith("/checkout") &&
+    (config.pages !== "storefront" || /^\/[a-z]{2}(\/|$)/.test(pathname ?? ""))
+
+  // Arm the trigger; every timer/listener is cleaned up on navigation or unmount
   useEffect(() => {
-    // Don't show on admin pages
-    if (pathname?.startsWith("/admin")) return
+    // Don't stack on top of the cookie banner
+    if (!config || !eligible || visible || bannerVisible || alreadySeen(config.frequency)) return
+    const show = () => {
+      returnFocusRef.current = document.activeElement as HTMLElement | null
+      setVisible(true)
+    }
 
-    fetch("/api/popup/config")
-      .then((r) => r.json())
-      .then((cfg: PopupSettings) => {
-        if (!cfg.enabled) return
+    if (config.timing === "scroll") {
+      const pct = config.timing_value ?? 30
+      const handler = () => {
+        const max = document.body.scrollHeight - window.innerHeight
+        if (max > 0 && (window.scrollY / max) * 100 >= pct) show()
+      }
+      window.addEventListener("scroll", handler, { passive: true })
+      return () => window.removeEventListener("scroll", handler)
+    }
 
-        // Page targeting
-        if (cfg.pages === "storefront") {
-          const isStorefront = /^\/[a-z]{2}(\/|$)/.test(pathname ?? "")
-          if (!isStorefront) return
-        }
+    if (config.timing === "exit") {
+      const handler = (e: MouseEvent) => { if (e.clientY <= 5) show() }
+      document.addEventListener("mouseleave", handler)
+      return () => document.removeEventListener("mouseleave", handler)
+    }
 
-        // Frequency gate
-        if (alreadySeen(cfg.frequency)) return
+    const t = setTimeout(show, (config.timing_value ?? 3) * 1000)
+    return () => clearTimeout(t)
+  }, [config, eligible, visible, bannerVisible, pathname])
 
-        setSettings(cfg)
-
-        // Timing
-        if (cfg.timing === "delay") {
-          const t = setTimeout(open, (cfg.timing_value ?? 3) * 1000)
-          return () => clearTimeout(t)
-        }
-
-        if (cfg.timing === "scroll") {
-          const pct = cfg.timing_value ?? 30
-          const handler = () => {
-            const scrolled = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100
-            if (scrolled >= pct) {
-              open()
-              window.removeEventListener("scroll", handler)
-            }
-          }
-          window.addEventListener("scroll", handler, { passive: true })
-          return () => window.removeEventListener("scroll", handler)
-        }
-
-        if (cfg.timing === "exit") {
-          const handler = (e: MouseEvent) => {
-            if (e.clientY <= 5) {
-              open()
-              document.removeEventListener("mouseleave", handler)
-            }
-          }
-          document.addEventListener("mouseleave", handler)
-          return () => document.removeEventListener("mouseleave", handler)
-        }
-      })
-      .catch(() => {/* silently ignore */})
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname])
-
-  function close() {
+  const close = useCallback(() => {
     setVisible(false)
-    if (settings) markSeen(settings.frequency)
-  }
+    if (config) markSeen(config.frequency)
+    returnFocusRef.current?.focus?.()
+  }, [config])
 
-  if (!settings || !visible) return null
+  // Focus trap + Escape while open
+  useEffect(() => {
+    if (!visible) return
+    const el = dialogRef.current
+    el?.querySelector<HTMLElement>(FOCUSABLE)?.focus()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { close(); return }
+      if (e.key !== "Tab" || !el) return
+      const nodes = Array.from(el.querySelectorAll<HTMLElement>(FOCUSABLE))
+      if (!nodes.length) return
+      const first = nodes[0]
+      const last = nodes[nodes.length - 1]
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+    }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [visible, close])
+
+  if (!config || !visible || !eligible) return null
+  const settings = config
 
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) close() }}
+      aria-hidden="false"
     >
-      {settings.template === "discount" && (
-        <DiscountTemplate settings={settings} onClose={close} />
-      )}
-      {settings.template === "announcement" && (
-        <AnnouncementTemplate settings={settings} onClose={close} />
-      )}
-      {settings.template === "newsletter" && (
-        <NewsletterTemplate settings={settings} onClose={close} />
-      )}
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={settings.heading || "Special offer"}
+        className="w-full flex justify-center"
+      >
+        {settings.template === "discount" && (
+          <DiscountTemplate settings={settings} onClose={close} />
+        )}
+        {settings.template === "announcement" && (
+          <AnnouncementTemplate settings={settings} onClose={close} />
+        )}
+        {settings.template === "newsletter" && (
+          <NewsletterTemplate settings={settings} onClose={close} />
+        )}
+      </div>
     </div>
   )
 }

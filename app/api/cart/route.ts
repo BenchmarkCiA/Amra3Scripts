@@ -13,17 +13,19 @@ export async function POST(request: NextRequest) {
 
     const { data: variant } = await supabase
       .from("product_variants")
-      .select("*, product:products(title, images)")
+      .select("*, product:products(title, images, status)")
       .eq("id", variant_id)
       .eq("product_id", product_id)
       .eq("is_available", true)
       .single()
 
-    if (!variant) {
-      return NextResponse.json({ error: "Variant not found" }, { status: 404 })
+    const product = variant?.product as { title: string; images: { url: string }[]; status: string } | null
+    if (!variant || !product || product.status !== "active") {
+      return NextResponse.json({ error: "This item is no longer available" }, { status: 404 })
     }
-
-    const product = variant.product as { title: string; images: { url: string }[] }
+    if (variant.inventory === 0) {
+      return NextResponse.json({ error: "This item is sold out" }, { status: 409 })
+    }
 
     return NextResponse.json({
       item: {
