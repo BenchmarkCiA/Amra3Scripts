@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic"
 
 import { createAdminClient } from "@/lib/supabase/admin"
 import PopupAdminPanel from "@/components/admin/PopupAdminPanel"
+import { getPopupCoupon } from "@/lib/popup/settings"
 
 const DEFAULT_SETTINGS = {
   enabled: false,
@@ -26,7 +27,11 @@ export default async function AdminPopupPage() {
     .eq("key", "popup_settings")
     .single()
 
-  const settings = { ...DEFAULT_SETTINGS, ...(data?.value ?? {}) }
+  const settings = {
+    ...DEFAULT_SETTINGS,
+    ...(data?.value ?? {}),
+    coupon_code: await getPopupCoupon(supabase),
+  }
 
   return (
     <div>

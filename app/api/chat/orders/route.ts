@@ -13,6 +13,7 @@ export async function GET() {
     .from("orders")
     .select("id, order_number, customer_status, total, currency, created_at, order_items(title, quantity, image_url)")
     .eq("customer_id", user.id)
+    .neq("status", "pending")
     .order("created_at", { ascending: false })
     .limit(5)
 

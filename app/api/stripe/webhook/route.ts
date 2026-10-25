@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server"
 import { stripe } from "@/lib/stripe/client"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { submitPrintifyOrder } from "@/lib/printify/orders"
+import { createPendingOrder } from "@/lib/orders/create"
+import { priceItems, type RequestedItem } from "@/lib/orders/pricing"
 import type Stripe from "stripe"
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
   const sig = request.headers.get("stripe-signature")
-
   if (!sig) return NextResponse.json({ error: "No signature" }, { status: 400 })
 
   let event: Stripe.Event
@@ -17,110 +18,168 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
   }
 
-  if (event.type === "checkout.session.completed") {
+  try {
     const session = event.data.object as Stripe.Checkout.Session
-    await handleCheckoutComplete(session)
+    switch (event.type) {
+      case "checkout.session.completed":
+        // Delayed payment methods complete later via async_payment_succeeded
+        if (session.payment_status === "paid") await fulfillSession(session)
+        break
+      case "checkout.session.async_payment_succeeded":
+        await fulfillSession(session)
+        break
+      case "checkout.session.async_payment_failed":
+        await cancelSession(session)
+        break
+      case "checkout.session.expired":
+        await discardAbandoned(session)
+        break
+    }
+  } catch (err) {
+    // Non-2xx makes Stripe retry; fulfillSession is idempotent
+    console.error(`Webhook ${event.type} failed:`, err)
+    return NextResponse.json({ error: "Processing failed" }, { status: 500 })
   }
 
   return NextResponse.json({ received: true })
 }
 
-async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
-  const supabase = createAdminClient()
-
-  const items = JSON.parse(session.metadata?.items ?? "[]") as {
-    product_id: string
-    variant_id: string
-    quantity: number
-  }[]
-
-  if (!items.length) return
-
-  // Fetch variant + product data
-  const variantIds = items.map((i) => i.variant_id)
-  const { data: variants } = await supabase
-    .from("product_variants")
-    .select("*, product:products(id, title, type, images)")
-    .in("id", variantIds)
-
-  if (!variants) return
-
+function shippingAddressFrom(session: Stripe.Checkout.Session) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const shipping = (session as any).shipping_details ?? (session as any).shipping
-  const shippingAddress = {
-    first_name: shipping?.name?.split(" ")[0] ?? session.customer_details?.name?.split(" ")[0] ?? "",
-    last_name: shipping?.name?.split(" ").slice(1).join(" ") ?? session.customer_details?.name?.split(" ").slice(1).join(" ") ?? "",
-    address1: shipping?.address?.line1 ?? session.customer_details?.address?.line1 ?? "",
-    address2: shipping?.address?.line2 ?? session.customer_details?.address?.line2 ?? "",
-    city: shipping?.address?.city ?? session.customer_details?.address?.city ?? "",
-    state: shipping?.address?.state ?? session.customer_details?.address?.state ?? "",
-    zip: shipping?.address?.postal_code ?? session.customer_details?.address?.postal_code ?? "",
-    country: shipping?.address?.country ?? session.customer_details?.address?.country ?? "",
-  }
-
-  const subtotal = (session.amount_subtotal ?? 0) / 100
-  const total = (session.amount_total ?? 0) / 100
-  const orderNumber = `ORD-${await nextOrderNumber(supabase)}`
-
-  const customerEmail = session.customer_details?.email ?? ""
-
-  // Link to customer account if they have one
-  const { data: customer } = await supabase
-    .from("customers")
-    .select("id")
-    .eq("email", customerEmail)
-    .single()
-
-  const { data: order, error } = await supabase
-    .from("orders")
-    .insert({
-      order_number: orderNumber,
-      customer_email: customerEmail,
-      customer_id: customer?.id ?? null,
-      status: "paid",
-      stripe_payment_intent_id: session.payment_intent as string,
-      subtotal,
-      total,
-      currency: session.currency?.toUpperCase() ?? "USD",
-      shipping_address: shippingAddress,
-    })
-    .select()
-    .single()
-
-  if (error || !order) {
-    console.error("Failed to create order:", error)
-    return
-  }
-
-  // Insert order items
-  const orderItems = items.map((item) => {
-    const variant = variants.find((v) => v.id === item.variant_id)
-    const product = variant?.product as { id: string; title: string; type: string; images: { url: string }[] }
-    return {
-      order_id: order.id,
-      product_id: item.product_id,
-      variant_id: item.variant_id,
-      product_type: product?.type ?? "manual",
-      title: product?.title ?? "",
-      variant_title: variant?.title ?? "",
-      sku: variant?.sku ?? null,
-      quantity: item.quantity,
-      unit_price: variant?.price ?? 0,
-      total_price: (variant?.price ?? 0) * item.quantity,
-      image_url: product?.images?.[0]?.url ?? null,
-    }
-  })
-
-  await supabase.from("order_items").insert(orderItems)
-
-  // Submit to Printify if any items are POD
-  const hasPrintify = orderItems.some((i) => i.product_type === "printify")
-  if (hasPrintify) {
-    await submitPrintifyOrder(order.id, variants, items, shippingAddress)
+  const s = session as any
+  const shipping = s.collected_information?.shipping_details ?? s.shipping_details ?? s.shipping
+  const details = session.customer_details
+  const name: string = shipping?.name ?? details?.name ?? ""
+  const addr = shipping?.address ?? details?.address
+  return {
+    first_name: name.split(" ")[0] ?? "",
+    last_name: name.split(" ").slice(1).join(" "),
+    address1: addr?.line1 ?? "",
+    address2: addr?.line2 ?? "",
+    city: addr?.city ?? "",
+    state: addr?.state ?? "",
+    zip: addr?.postal_code ?? "",
+    country: addr?.country ?? "",
+    phone: details?.phone ?? "",
   }
 }
 
-async function nextOrderNumber(supabase: ReturnType<typeof createAdminClient>): Promise<number> {
-  const { data } = await supabase.rpc("nextval", { seq: "order_number_seq" }).single()
-  return (data as number) ?? Date.now()
+/** Resolves the order for a session, creating one for sessions made before order-first checkout. */
+async function resolveOrderId(
+  supabase: ReturnType<typeof createAdminClient>,
+  session: Stripe.Checkout.Session
+): Promise<string | null> {
+  const fromMeta = session.metadata?.order_id ?? session.client_reference_id
+  if (fromMeta) return fromMeta
+
+  const { data: existing } = await supabase
+    .from("orders").select("id").eq("stripe_session_id", session.id).maybeSingle()
+  if (existing) return existing.id
+
+  // Legacy sessions carried the cart in metadata
+  const legacy = JSON.parse(session.metadata?.items ?? "[]") as RequestedItem[]
+  if (!legacy.length) return null
+  const lines = await priceItems(supabase, legacy).catch(() => null)
+  if (!lines) return null
+  const order = await createPendingOrder(supabase, {
+    lines,
+    email: session.customer_details?.email ?? "",
+    customerId: null,
+    currency: session.currency ?? "usd",
+    discount: (session.total_details?.amount_discount ?? 0) / 100,
+    couponCode: null,
+  })
+  await supabase.from("orders").update({ stripe_session_id: session.id }).eq("id", order.id)
+  return order.id
+}
+
+async function fulfillSession(session: Stripe.Checkout.Session) {
+  const supabase = createAdminClient()
+  const orderId = await resolveOrderId(supabase, session)
+  if (!orderId) {
+    console.error("Webhook: no order for session", session.id)
+    return
+  }
+
+  const email = session.customer_details?.email ?? ""
+  const { data: customer } = email
+    ? await supabase.from("customers").select("id").eq("email", email).maybeSingle()
+    : { data: null }
+
+  const shippingAddress = shippingAddressFrom(session)
+
+  // Conditional update = idempotency: only the first delivery moves pending → paid
+  const { data: order, error } = await supabase
+    .from("orders")
+    .update({
+      status: "paid",
+      stripe_session_id: session.id,
+      stripe_payment_intent_id: typeof session.payment_intent === "string" ? session.payment_intent : null,
+      customer_email: email,
+      ...(customer?.id ? { customer_id: customer.id } : {}),
+      subtotal: (session.amount_subtotal ?? 0) / 100,
+      discount: (session.total_details?.amount_discount ?? 0) / 100,
+      total: (session.amount_total ?? 0) / 100,
+      currency: (session.currency ?? "usd").toUpperCase(),
+      shipping_address: shippingAddress,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", orderId)
+    .eq("status", "pending")
+    .select("id, coupon_code")
+    .maybeSingle()
+  if (error) throw error
+  if (!order) return // already fulfilled (duplicate delivery) or cancelled
+
+  const { data: items, error: itemsError } = await supabase
+    .from("order_items")
+    .select("variant_id, quantity, product_type, variant:product_variants(printify_variant_id, product:products(printify_id))")
+    .eq("order_id", order.id)
+  if (itemsError) throw itemsError
+
+  for (const item of items ?? []) {
+    if (item.variant_id) {
+      await supabase.rpc("decrement_inventory", { p_variant_id: item.variant_id, p_qty: item.quantity })
+    }
+  }
+
+  if (order.coupon_code) {
+    await supabase.rpc("increment_coupon_use", { p_code: order.coupon_code })
+  }
+
+  type Joined = { printify_variant_id: string | null; product: { printify_id: string | null } | null } | null
+  const printifyLines = (items ?? [])
+    .filter((i) => i.product_type === "printify")
+    .map((i) => {
+      const v = i.variant as unknown as Joined
+      return {
+        printify_product_id: v?.product?.printify_id ?? null,
+        printify_variant_id: v?.printify_variant_id ?? null,
+        quantity: i.quantity,
+      }
+    })
+  if (printifyLines.length) {
+    await submitPrintifyOrder(order.id, printifyLines, shippingAddress)
+  }
+}
+
+/** Abandoned checkout: drop the never-paid order so it doesn't clutter admin/account views. */
+async function discardAbandoned(session: Stripe.Checkout.Session) {
+  const orderId = session.metadata?.order_id ?? session.client_reference_id
+  if (!orderId) return
+  const supabase = createAdminClient()
+  const { error } = await supabase.from("orders").delete().eq("id", orderId).eq("status", "pending")
+  if (error) throw error
+}
+
+async function cancelSession(session: Stripe.Checkout.Session) {
+  const orderId = session.metadata?.order_id ?? session.client_reference_id
+  if (!orderId) return
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from("orders")
+    .update({ status: "cancelled", updated_at: new Date().toISOString() })
+    .eq("id", orderId)
+    .eq("status", "pending")
+  if (error) throw error
 }

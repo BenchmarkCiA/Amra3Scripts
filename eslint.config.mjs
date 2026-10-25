@@ -8,7 +8,7 @@ const eslintConfig = defineConfig([
   ...nextTs,
   // jsx-a11y recommended rules
   {
-    plugins: { "jsx-a11y": jsxA11y },
+    // eslint-config-next already registers the jsx-a11y plugin; just enable its recommended rules
     rules: {
       ...jsxA11y.configs.recommended.rules,
       // Next.js uses <Link> instead of <a> for internal navigation — allow href on <a>

@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { COUNTRIES, isValidCountry, type CountryCode, type Country } from "@/lib/countries"
+import { COUNTRIES, type CountryCode, type Country } from "@/lib/countries"
 
 function Flag({ code, width, height }: { code: string; width: number; height: number }) {
   return (
@@ -17,21 +17,8 @@ function Flag({ code, width, height }: { code: string; width: number; height: nu
   )
 }
 
+// Explicit country picker (the root "/" redirects automatically)
 export default function CountryGatePage() {
-  const router = useRouter()
-  const [checked, setChecked] = useState(false)
-
-  useEffect(() => {
-    const saved = localStorage.getItem("otzma_country")
-    if (saved && isValidCountry(saved)) {
-      router.replace(`/${saved}`)
-    } else {
-      setChecked(true)
-    }
-  }, [router])
-
-  if (!checked) return null
-
   return <CountryGateUI />
 }
 

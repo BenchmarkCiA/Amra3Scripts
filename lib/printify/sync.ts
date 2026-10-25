@@ -46,23 +46,34 @@ export async function syncPrintifyProducts(): Promise<{ synced: number; errors: 
           position: i,
         }))
 
-        const { data: product, error } = await supabase
+        const { data: existing } = await supabase
           .from("products")
-          .upsert(
-            {
-              type: "printify",
-              printify_id: p.id,
-              title: p.title,
-              description: p.description,
-              slug,
-              images,
-              tags: p.tags ?? [],
-              status: "active",
-            },
-            { onConflict: "printify_id" }
-          )
-          .select()
-          .single()
+          .select("id")
+          .eq("printify_id", p.id)
+          .maybeSingle()
+
+        // Existing products keep their admin-set status and slug (URLs/SEO stay stable)
+        const { data: product, error } = existing
+          ? await supabase
+              .from("products")
+              .update({ title: p.title, description: p.description, images, tags: p.tags ?? [] })
+              .eq("id", existing.id)
+              .select()
+              .single()
+          : await supabase
+              .from("products")
+              .insert({
+                type: "printify",
+                printify_id: p.id,
+                title: p.title,
+                description: p.description,
+                slug,
+                images,
+                tags: p.tags ?? [],
+                status: "active",
+              })
+              .select()
+              .single()
 
         if (error || !product) {
           errors++
@@ -96,9 +107,10 @@ export async function syncPrintifyProducts(): Promise<{ synced: number; errors: 
           }
         })
 
-        await supabase
+        const { error: variantError } = await supabase
           .from("product_variants")
-          .upsert(variantRows, { onConflict: "printify_variant_id" })
+          .upsert(variantRows, { onConflict: "product_id,printify_variant_id" })
+        if (variantError) throw variantError
 
         synced++
       } catch (err) {

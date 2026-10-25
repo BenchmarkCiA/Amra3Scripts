@@ -33,6 +33,7 @@ export default async function AccountPage() {
     .from("orders")
     .select("id, order_number, status, customer_status, total, currency, created_at, order_items(title, quantity, image_url)")
     .eq("customer_id", user!.id)
+    .neq("status", "pending")
     .order("created_at", { ascending: false })
 
   return (

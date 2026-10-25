@@ -8,7 +8,8 @@ export default async function AdminOrdersPage() {
   const supabase = createAdminClient()
   const { data: orders } = await supabase
     .from("orders")
-    .select("id, order_number, customer_email, status, fulfillment_status, customer_status, total, created_at")
+    .select("id, order_number, customer_email, status, fulfillment_status, customer_status, total, currency, created_at")
+    .neq("status", "pending")
     .order("created_at", { ascending: false })
 
   return (

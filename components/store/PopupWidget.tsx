@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { usePathname } from "next/navigation"
 import { X } from "lucide-react"
+import { safeHref } from "@/lib/utils/safeUrl"
 
 interface PopupSettings {
   enabled: boolean
@@ -208,9 +209,9 @@ function AnnouncementTemplate({
       <p className="text-gray-300 text-sm leading-relaxed mb-7">
         {settings.body || "We have exciting news for you."}
       </p>
-      {settings.cta_label && settings.cta_url ? (
+      {settings.cta_label && safeHref(settings.cta_url) ? (
         <a
-          href={settings.cta_url}
+          href={safeHref(settings.cta_url) ?? undefined}
           onClick={onClose}
           className="inline-block bg-yellow-400 text-gray-900 font-bold px-7 py-3 rounded-xl text-sm hover:bg-yellow-300 transition-colors"
         >

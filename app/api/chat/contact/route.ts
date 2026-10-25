@@ -5,8 +5,14 @@ import { createAdminClient } from "@/lib/supabase/admin"
 export async function POST(request: NextRequest) {
   const { name, email, message } = await request.json()
 
-  if (!email || !message) {
+  if (typeof email !== "string" || typeof message !== "string" || !email.trim() || !message.trim()) {
     return NextResponse.json({ error: "Email and message are required" }, { status: 400 })
+  }
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    return NextResponse.json({ error: "Please enter a valid email address" }, { status: 400 })
+  }
+  if (message.length > 5000 || (typeof name === "string" && name.length > 200)) {
+    return NextResponse.json({ error: "Message is too long" }, { status: 400 })
   }
 
   const supabase = await createClient()
@@ -24,12 +30,17 @@ export async function POST(request: NextRequest) {
     customerId = customer?.id ?? null
   }
 
-  await admin.from("contact_messages").insert({
-    name: name || null,
-    email,
-    message,
+  const { error } = await admin.from("contact_messages").insert({
+    name: typeof name === "string" && name.trim() ? name.trim() : null,
+    // Signed-in customers can't send on behalf of another address
+    email: user?.email ?? email.trim(),
+    message: message.trim(),
     customer_id: customerId,
   })
+  if (error) {
+    console.error("Contact message insert failed:", error)
+    return NextResponse.json({ error: "Could not send message" }, { status: 500 })
+  }
 
   return NextResponse.json({ success: true })
 }

@@ -9,8 +9,11 @@ export async function GET() {
     .eq("key", "popup_settings")
     .single()
 
+  // Never expose the coupon publicly — it is only returned after consent via /api/popup/subscribe
+  const { coupon_code: _hidden, ...publicValue } = (data?.value ?? { enabled: false }) as Record<string, unknown>
+  void _hidden
   return NextResponse.json(
-    data?.value ?? { enabled: false },
+    publicValue,
     { headers: { "Cache-Control": "no-store" } }
   )
 }

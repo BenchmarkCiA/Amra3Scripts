@@ -6,22 +6,29 @@ import { formatPrice } from "@/lib/utils/currency"
 export default async function AdminDashboard() {
   const supabase = createAdminClient()
 
+  const since = new Date(Date.now() - 30 * 86_400_000).toISOString()
+  const PAID = ["paid", "processing", "shipped", "delivered"]
   const [
     { count: productCount },
     { count: orderCount },
     { data: recentOrders },
+    { data: paidLast30 },
   ] = await Promise.all([
     supabase.from("products").select("*", { count: "exact", head: true }).eq("status", "active"),
-    supabase.from("orders").select("*", { count: "exact", head: true }),
-    supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(5),
+    supabase.from("orders").select("*", { count: "exact", head: true }).neq("status", "pending"),
+    supabase.from("orders").select("*").neq("status", "pending").order("created_at", { ascending: false }).limit(5),
+    supabase.from("orders").select("total, currency").in("status", PAID).gte("created_at", since),
   ])
 
-  const revenue = recentOrders?.reduce((sum, o) => sum + (o.total ?? 0), 0) ?? 0
+  // Revenue in USD-only orders for now; other currencies are listed separately once multi-currency lands
+  const revenue = (paidLast30 ?? [])
+    .filter((o) => (o.currency ?? "USD") === "USD")
+    .reduce((sum, o) => sum + Number(o.total ?? 0), 0)
 
   const stats = [
     { label: "Active Products", value: productCount ?? 0 },
     { label: "Total Orders", value: orderCount ?? 0 },
-    { label: "Recent Revenue", value: formatPrice(revenue, "USD") },
+    { label: "Revenue (30 days)", value: formatPrice(revenue, "USD") },
   ]
 
   return (

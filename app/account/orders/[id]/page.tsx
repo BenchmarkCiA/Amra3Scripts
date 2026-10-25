@@ -28,6 +28,7 @@ export default async function OrderDetailPage({ params }: Props) {
     .select("*, order_items(title, variant_title, quantity, unit_price, total_price, image_url)")
     .eq("id", id)
     .eq("customer_id", user!.id)
+    .neq("status", "pending")
     .single()
 
   if (!order) notFound()

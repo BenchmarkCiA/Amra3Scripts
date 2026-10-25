@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { checkImageUpload } from "@/lib/utils/imageUpload"
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -12,15 +13,15 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const file = formData.get("file") as File
-    if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 })
+    const check = checkImageUpload(file)
+    if ("error" in check) return NextResponse.json({ error: check.error }, { status: 400 })
 
-    const ext = file.name.split(".").pop()
-    const filename = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const filename = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${check.ext}`
 
     const admin = createAdminClient()
     const { error } = await admin.storage
       .from("product-images")
-      .upload(filename, file, { contentType: file.type, upsert: false })
+      .upload(filename, file, { contentType: check.type, upsert: false })
 
     if (error) throw error
 

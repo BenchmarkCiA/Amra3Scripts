@@ -1,33 +1,37 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getPopupCoupon } from "@/lib/popup/settings"
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export async function POST(req: NextRequest) {
   const { email, marketing_consent } = await req.json()
 
-  if (!email || typeof email !== "string" || !email.includes("@")) {
+  if (typeof email !== "string" || email.length > 254 || !EMAIL_RE.test(email.trim())) {
     return NextResponse.json({ error: "Invalid email" }, { status: 400 })
   }
 
+  const normalized = email.toLowerCase().trim()
   const supabase = createAdminClient()
 
-  // Upsert customer record
-  await supabase.from("customers").upsert(
-    { email: email.toLowerCase().trim(), marketing_consent: !!marketing_consent },
-    { onConflict: "email", ignoreDuplicates: false }
-  )
+  // Only store the address when the visitor consented to marketing
+  if (marketing_consent) {
+    const { error } = await supabase
+      .from("email_subscribers")
+      .upsert(
+        { email: normalized, status: "active", source: "popup" },
+        { onConflict: "email", ignoreDuplicates: true }
+      )
+    if (error) {
+      console.error("Popup subscribe failed:", error)
+      return NextResponse.json({ error: "Subscription failed" }, { status: 500 })
+    }
+  }
 
-  // Only return coupon if they consented
   if (!marketing_consent) {
     return NextResponse.json({ success: true, coupon: null })
   }
 
-  const { data: settings } = await supabase
-    .from("site_settings")
-    .select("value")
-    .eq("key", "popup_settings")
-    .single()
-
-  const coupon = settings?.value?.coupon_code ?? null
-
+  const coupon = (await getPopupCoupon(supabase)) || null
   return NextResponse.json({ success: true, coupon })
 }

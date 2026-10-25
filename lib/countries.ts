@@ -83,7 +83,7 @@ export type CountryCode = keyof typeof COUNTRIES
 export type Country = (typeof COUNTRIES)[CountryCode]
 
 export function isValidCountry(code: string): code is CountryCode {
-  return code in COUNTRIES
+  return Object.prototype.hasOwnProperty.call(COUNTRIES, code)
 }
 
 export function formatCountryPrice(usdPrice: number, country: Country): string {

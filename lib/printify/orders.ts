@@ -2,32 +2,27 @@ import { printify } from "./client"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { Address } from "@/types"
 
-export async function submitPrintifyOrder(
-  orderId: string,
-  variants: { printify_variant_id?: string; price: number; product: unknown }[],
-  items: { product_id: string; variant_id: string; quantity: number }[],
-  address: Address
-) {
+export interface PrintifyLine {
+  printify_product_id: string | null
+  printify_variant_id: string | null
+  quantity: number
+}
+
+export async function submitPrintifyOrder(orderId: string, lines: PrintifyLine[], address: Address) {
   const shopId = process.env.PRINTIFY_SHOP_ID
   if (!shopId) return
 
-  const supabase = createAdminClient()
-
-  const line_items = items
-    .map((item) => {
-      const variant = variants.find((v) => item.variant_id === item.variant_id)
-      if (!variant?.printify_variant_id) return null
-      return {
-        print_provider_id: 1,
-        blueprint_id: 1,
-        variant_id: parseInt(variant.printify_variant_id),
-        quantity: item.quantity,
-      }
-    })
-    .filter(Boolean)
+  const line_items = lines
+    .filter((l) => l.printify_product_id && l.printify_variant_id)
+    .map((l) => ({
+      product_id: l.printify_product_id!,
+      variant_id: parseInt(l.printify_variant_id!, 10),
+      quantity: l.quantity,
+    }))
 
   if (!line_items.length) return
 
+  const supabase = createAdminClient()
   try {
     const order = await printify.post(`/shops/${shopId}/orders.json`, {
       external_id: orderId,
@@ -54,5 +49,10 @@ export async function submitPrintifyOrder(
       .eq("id", orderId)
   } catch (err) {
     console.error("Printify order submission failed:", err)
+    // Leave a visible trace for the admin instead of failing silently
+    await supabase
+      .from("orders")
+      .update({ notes: `Printify submission failed: ${(err as Error).message ?? "unknown error"}` })
+      .eq("id", orderId)
   }
 }

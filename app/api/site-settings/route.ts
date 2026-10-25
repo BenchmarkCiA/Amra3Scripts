@@ -6,7 +6,18 @@ export async function GET() {
   try {
     const admin = createAdminClient()
     const { data } = await admin.from("site_settings").select("key, value")
-    const settings = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]))
+    const settings = Object.fromEntries(
+      (data ?? [])
+        .filter((r) => r.key !== "popup_coupon")
+        .map((r) => {
+          if (r.key === "popup_settings" && r.value && typeof r.value === "object") {
+            const { coupon_code: _hidden, ...rest } = r.value as Record<string, unknown>
+            void _hidden
+            return [r.key, rest]
+          }
+          return [r.key, r.value]
+        })
+    )
     return NextResponse.json(settings)
   } catch {
     return NextResponse.json({})

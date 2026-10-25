@@ -4,11 +4,12 @@ import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
+import { safeRedirectPath } from "@/lib/utils/safeUrl"
 
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const next = searchParams.get("next") ?? "/admin"
+  const next = safeRedirectPath(searchParams.get("next"), "/account")
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")

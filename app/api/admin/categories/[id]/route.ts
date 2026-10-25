@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-
-async function requireAdmin() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  return user?.email === process.env.ADMIN_EMAIL ? user : null
-}
+import { requireAdmin } from "@/lib/auth/requireAdmin"
 
 export async function PATCH(
   request: NextRequest,

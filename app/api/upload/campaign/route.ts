@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isValidCountry } from "@/lib/countries"
+import { checkImageUpload } from "@/lib/utils/imageUpload"
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -15,18 +16,18 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File
     const countryCode = formData.get("country_code") as string
 
-    if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 })
+    const check = checkImageUpload(file)
+    if ("error" in check) return NextResponse.json({ error: check.error }, { status: 400 })
     if (!countryCode || !isValidCountry(countryCode)) {
       return NextResponse.json({ error: "Invalid country code" }, { status: 400 })
     }
 
-    const ext = file.name.split(".").pop()
-    const filename = `campaign/${countryCode}-${Date.now()}.${ext}`
+    const filename = `campaign/${countryCode}-${Date.now()}.${check.ext}`
 
     const admin = createAdminClient()
     const { error: uploadError } = await admin.storage
       .from("product-images")
-      .upload(filename, file, { contentType: file.type, upsert: true })
+      .upload(filename, file, { contentType: check.type, upsert: true })
 
     if (uploadError) throw uploadError
 

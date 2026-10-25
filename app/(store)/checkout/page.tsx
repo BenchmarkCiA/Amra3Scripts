@@ -7,26 +7,33 @@ import { formatPrice } from "@/lib/utils/currency"
 export default function CheckoutPage() {
   const { items, total, couponCode, discountAmount } = useCart()
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
   const cartTotal = total()
   const finalTotal = Math.max(0, cartTotal - discountAmount)
 
   const handleCheckout = async () => {
     setLoading(true)
+    setError("")
     try {
       const res = await fetch("/api/orders/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, couponCode }),
+        body: JSON.stringify({
+          items: items.map(({ product_id, variant_id, quantity, customText }) => ({ product_id, variant_id, quantity, customText })),
+          couponCode,
+        }),
       })
-      const data = await res.json()
-      if (data.url) {
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && data.url) {
         window.location.href = data.url
+        return
       }
-    } catch (err) {
-      console.error(err)
-      setLoading(false)
+      setError(data.error ?? "We couldn't start checkout. Please try again.")
+    } catch {
+      setError("Network error — please check your connection and try again.")
     }
+    setLoading(false)
   }
 
   if (!items.length) {
@@ -103,6 +110,11 @@ export default function CheckoutPage() {
           <p className="text-sm text-muted-foreground">
             You&apos;ll be redirected to our secure checkout powered by Stripe. No card details are stored on our servers.
           </p>
+          {error && (
+            <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              {error}
+            </p>
+          )}
           <button
             onClick={handleCheckout}
             disabled={loading}
