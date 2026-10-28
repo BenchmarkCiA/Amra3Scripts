@@ -62,6 +62,10 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
   // throw away (a 5-year-old taps everywhere) — only the × closes those.
   const backdropCloses = challenge.kind === 'selfreport' || challenge.kind === 'discovery';
   const finished = justCompleted || submitted;
+  // Spread siblings evenly around each subject's fact cycle (3 kids, 30 facts
+  // → 0/10/20) so no two get the same fact on the same day.
+  const childIndex = Math.max(0, state.children.findIndex((c) => c.id === childId));
+  const discoveryOffset = childIndex * Math.floor(30 / Math.max(1, state.children.length));
 
   return (
     <div className="modal-backdrop" onClick={backdropCloses ? onClose : undefined}>
@@ -141,7 +145,9 @@ export function TaskDetailModal({ childId, challenge, onClose }: Props) {
           />
         )}
 
-        {!finished && challenge.kind === 'discovery' && <DiscoveryBody onDone={(noteText) => handleMarkComplete(noteText)} lang={lang} />}
+        {!finished && challenge.kind === 'discovery' && (
+          <DiscoveryBody onDone={(noteText) => handleMarkComplete(noteText)} lang={lang} childOffset={discoveryOffset} />
+        )}
 
         {!finished && challenge.kind === 'selfreport' && (
             <div>
@@ -305,7 +311,15 @@ function QuizBody({
   );
 }
 
-function DiscoveryBody({ onDone, lang }: { onDone: (note: string) => void; lang: Parameters<typeof t>[0] }) {
+function DiscoveryBody({
+  onDone,
+  lang,
+  childOffset,
+}: {
+  onDone: (note: string) => void;
+  lang: Parameters<typeof t>[0];
+  childOffset: number;
+}) {
   const [picked, setPicked] = useState<{ subjectLabel: string; fact: string } | null>(null);
 
   if (picked) {
@@ -328,7 +342,7 @@ function DiscoveryBody({ onDone, lang }: { onDone: (note: string) => void; lang:
       </div>
       <div className="chip-row">
         {factSubjects.map((s) => (
-          <button key={s.id} type="button" className="chip" onClick={() => setPicked(randomFact(s.id, lang, todayISO()))}>
+          <button key={s.id} type="button" className="chip" onClick={() => setPicked(randomFact(s.id, lang, todayISO(), childOffset))}>
             {s.emoji} {lang === 'he' ? s.labelHe : s.label}
           </button>
         ))}

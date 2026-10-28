@@ -1,5 +1,5 @@
 import type { Language } from '../types';
-import { dailyBagIndex, dayNumber } from '../lib/seededRandom';
+import { dailyCycleIndex, dayNumber } from '../lib/seededRandom';
 
 export interface FactSubject {
   id: string;
@@ -172,14 +172,18 @@ export const factSubjects: FactSubject[] = [
   },
 ];
 
-// Stable-for-the-day pick, cycling through every fact in the subject before
-// any repeat (same bag-randomization technique as the daily quiz rotation —
-// see lib/dailyQuiz.ts) instead of a plain Math.random() pick, which let the
-// same fact reappear the very next tap purely by chance on these small
-// per-subject pools.
-export function randomFact(subjectId: string, lang: Language, dateISO: string): { subjectLabel: string; fact: string } {
+// Stable-for-the-day pick that walks every fact in the subject before any
+// repeats (an exact `facts.length`-day cycle). `childOffset` puts each child
+// at a different point in that cycle, so siblings never get the same fact
+// for the same subject on the same day.
+export function randomFact(
+  subjectId: string,
+  lang: Language,
+  dateISO: string,
+  childOffset = 0,
+): { subjectLabel: string; fact: string } {
   const subject = factSubjects.find((s) => s.id === subjectId) ?? factSubjects[0];
-  const idx = dailyBagIndex(subject.facts.length, subjectId, dayNumber(dateISO));
+  const idx = dailyCycleIndex(subject.facts.length, subjectId, dayNumber(dateISO), childOffset);
   if (lang === 'he') return { subjectLabel: subject.labelHe, fact: subject.factsHe[idx] ?? subject.facts[idx] };
   return { subjectLabel: subject.label, fact: subject.facts[idx] };
 }

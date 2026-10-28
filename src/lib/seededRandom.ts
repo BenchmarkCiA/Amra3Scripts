@@ -42,18 +42,17 @@ export function dayNumber(dateISO: string): number {
   return Math.floor((Date.parse(`${dateISO}T00:00:00Z`) - EPOCH_MS) / MS_PER_DAY);
 }
 
-// Deterministic "shuffle-bag" pick, generalized to a single index rather
-// than a whole subset: returns a stable-for-the-day index into an array of
-// `length`, cycling through every index with no repeat before reshuffling —
-// same technique as getDailyQuestions (lib/dailyQuiz.ts), sized down for
-// "one item per day" cases like a daily fact.
-export function dailyBagIndex(length: number, seedKey: string, day: number): number {
+// Stable-for-the-day index into an array of `length`, walking one fixed
+// shuffled order (per seedKey) so every index comes up exactly once every
+// `length` days — no early repeats, no repeat at a reshuffle seam. `offset`
+// shifts where a given viewer is in that order: viewers with different
+// offsets (mod length) never get the same index on the same day.
+export function dailyCycleIndex(length: number, seedKey: string, day: number, offset = 0): number {
   if (length <= 1) return 0;
-  const pass = Math.floor(day / length);
-  const posInPass = day % length;
   const order = seededShuffle(
     Array.from({ length }, (_, i) => i),
-    `${seedKey}-pass-${pass}`,
+    seedKey,
   );
-  return order[posInPass];
+  const pos = (((day + offset) % length) + length) % length;
+  return order[pos];
 }
