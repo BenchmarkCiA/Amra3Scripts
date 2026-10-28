@@ -504,6 +504,14 @@ it's almost certainly in `src/lib/supabaseSync.ts` or `supabaseClient.ts`.
     (C_T → CAT/CUT/COT) — now picture-hinted (🐱 C_T); "NOT round" had two
     right answers; "GREEN star" offered hearts; three facts corrected.
 
+- **Discovery ("Moment of Knowledge"): 30 days of fresh facts per child.**
+  Each of the 6 subjects grew from 8 to 30 facts (180 total, EN + HE, all
+  independently fact-checked). Each subject walks one fixed shuffled order
+  (`dailyCycleIndex` in `lib/seededRandom.ts`), so a fact can't come back for
+  30 days even if a child picks the same subject every day, and each child is
+  offset 10 days apart in that cycle so siblings never get the same fact on
+  the same day.
+
 ## Deliberately deferred (see PRD §39's own "don't build everything at once")
 
 These are called out in the PRD itself as v1.5/v2/v3 scope, or need infrastructure
